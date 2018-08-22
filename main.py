@@ -35,11 +35,12 @@ while True:
 
 	# Todo spawn separate thread to handle parsing the message and pushing it to the queue
 	with jsock:
-		message = jsock.read_obj(lambda msg: json.loads(msg, object_hook=MessageEncoder.decode))
+		while True:
+			message = jsock.read_obj(lambda msg: json.loads(msg, object_hook=MessageEncoder.decode))
 
-		#Todo maybe parse commands here?
-		if message.type == 'CMD':
-			cmd_queue.put(message)
-			print("Got Command {0}. Pushed to command queue".format(message))
-		else:
-			print("Got unrecognized message {0}".format(message))
+			#Todo maybe parse commands here?
+			if message.type == 'CMD':
+				cmd_queue.put(message)
+				print("Got Command {0}. Pushed to command queue".format(message))
+			else:
+				print("Got unrecognized message {0}".format(message))
