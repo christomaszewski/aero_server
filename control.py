@@ -1,5 +1,6 @@
 import threading
 import dronekit
+from pymavlink import mavutil
 import Queue
 import time
 
@@ -11,8 +12,8 @@ class DroneController(threading.Thread):
 		
 		# spin up drone kit, connect to mavlink stream, etc
 		connection_string = 'tcp:127.0.0.1:5760'
-		self._vehicle = dronekit.connect(connection_string, wait_ready=False)
-		self._vehicle.mode = dronekit.VehicleMode('GUIDED')
+		self._vehicle = dronekit.connect(connection_string, wait_ready=True)
+		self._px4_set_mode(8) #Guided mode
 
 		super(DroneController, self).__init__()
 
@@ -64,3 +65,8 @@ class DroneController(threading.Thread):
 
  		else:
  			print("Unknown command{0}".format(cmd))
+
+ 	def _px4_set_mode(self, mode):
+ 		self._vehicle._master.mav.command_long_send(self._vehicle._master.target_system, self._vehicle._master.target_component,
+ 																	mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0,
+ 																	mode, 0, 0, 0, 0, 0, 0)
