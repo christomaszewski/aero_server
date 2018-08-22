@@ -1,0 +1,45 @@
+from jsocket import JsonServer
+import Queue
+from control import DroneController
+from messages import MessageEncoder
+import json
+import sys
+import signal
+
+# Create command queue 
+cmd_queue = Queue.Queue()
+
+# Spawn control thread and pass queue reference
+control_thread = DroneController(cmd_queue)
+control_thread.start()
+
+# Setup json server to receive commands and push them to cmd queue
+jserver = JsonServer()
+jserver.bind("192.168.0.142", 6780)
+jserver.listen()
+
+
+# Add signal handler to kill all threads
+def signal_handler(sig, frame):
+	print("Server shutting down...")
+	control_thread.stop()
+	jserver.close()
+	control_thread.join()
+	sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
+
+while True:
+	jsock = jserver.accept()
+
+	# Todo spawn separate thread to handle parsing the message and pushing it to the queue
+	with jsock:
+		message = jsock.read_obj(lambda msg: json.loads(msg, object_hook=MessageEncoder.decode))
+
+		#Todo maybe parse commands here?
+		if message.type == 'CMD':
+			cmd_queue.put(message)
+			print("Got Command {0}. Pushed to command queue".format(message))
+		else:
+			print("Got unrecognized message {0}".format(message))
