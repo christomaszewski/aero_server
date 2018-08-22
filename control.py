@@ -1,6 +1,7 @@
 import threading
 import dronekit
 import Queue
+import time
 
 class DroneController(threading.Thread):
 
@@ -11,7 +12,7 @@ class DroneController(threading.Thread):
 		# spin up drone kit, connect to mavlink stream, etc
 		connection_string = 'tcp:127.0.0.1:5760'
 		self._vehicle = dronekit.connect(connection_string, wait_ready=False)
-		self._vehicle.mode = VehicleMode('GUIDED')
+		self._vehicle.mode = dronekit.VehicleMode('GUIDED')
 
 		super(DroneController, self).__init__()
 
