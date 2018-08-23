@@ -51,23 +51,38 @@ class DroneController(threading.Thread):
  		payload = cmd.payload
 
  		if payload['cmd'] == 'ARM_DISARM' and payload['value'] == 'ARM':
+ 			self._px4_set_mode(8) #Guided mode
  			self._vehicle.armed = True
 
- 			while not self._vehicle.armed:
+ 			while self._is_alive and not self._vehicle.armed:
  				print("Waiting for arming...")
  				time.sleep(1)
+ 				self._vehicle.armed = True
+
  		elif payload['cmd'] == 'ARM_DISARM' and payload['value'] == 'DISARM':
+ 			self._px4_set_mode(8) #Guided mode
  			self._vehicle.armed = False
 
- 			while self._vehicle.armed:
+ 			while self._is_alive and self._vehicle.armed:
  				print("Waiting for disarming...")
  				time.sleep(1)
- 		elif payload['cmd'] == 'TAKEOFF':
- 			if self._vehicle.armed:
- 				self._vehicle.simple_takeoff(payload['target_altitude'])
+ 				self._vehicle.armed = False
 
- 				while self._vehicle.location.global_relative_frame.alt <= payload['target_altitude']*0.95:
+ 		elif payload['cmd'] == 'TAKEOFF':
+ 			self._px4_set_mode(8) #Guided mode
+
+ 			if self._vehicle.armed:
+ 				#self._vehicle.simple_takeoff(payload['target_altitude'])
+ 				current_pos = self._vehicle.location.global_relative_frame.alt
+ 				self._vehicle._master.mav.command_long_send(self._vehicle._master.target_system, self._vehicle._master.target_component,
+ 																	mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0,
+ 																	1, 0, 0, 0, current_pos.lat, current_pos.lon, payload['target_altitude'])
+ 				print("taking off to target altitude {0}".format(payload['target_altitude']))
+ 				while self._is_alive and self._vehicle.location.global_relative_frame.alt <= payload['target_altitude']*0.95:
+ 					print("Current altitude: {0}".format(self._vehicle.location.global_relative_frame.alt))
  					time.sleep(1)
+
+ 				print("Takeoff complete")
 
  		elif payload['cmd'] == 'LAND':
  			self._vehicle.mode = dronekit.VehicleMode('LAND')

@@ -11,7 +11,7 @@ arm_msg = Message(msg_type, arm_payload)
 disarm_msg = Message(msg_type, disarm_payload)
 
 jsock = JsonClient()
-jsock.connect('192.168.0.114', 6780)
+jsock.connect('192.168.1.201', 6780)
 
 print("Connected, sending arm message {0}".format(arm_msg))
 jsock.send_obj(arm_msg, lambda obj: json.dumps(obj, cls=arm_msg.json_encoder, indent=2))
