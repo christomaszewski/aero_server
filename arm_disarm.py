@@ -14,12 +14,12 @@ jsock = JsonClient()
 jsock.connect('192.168.0.114', 6780)
 
 print("Connected, sending arm message {0}".format(arm_msg))
+jsock.send_obj(arm_msg, lambda obj: json.dumps(obj, cls=arm_msg.json_encoder, indent=2))
+
+time.sleep(15)
+
 jsock.send_obj(disarm_msg, lambda obj: json.dumps(obj, cls=disarm_msg.json_encoder, indent=2))
 
-#time.sleep(3)
-
-jsock.send_obj(disarm_msg, lambda obj: json.dumps(obj, cls=disarm_msg.json_encoder, indent=2))
-
-time.sleep(10)
+time.sleep(3)
 
 jsock.close()

@@ -12,7 +12,7 @@ class DroneController(threading.Thread):
 		
 		# spin up drone kit, connect to mavlink stream, etc
 		connection_string = 'tcp:127.0.0.1:5760'
-		self._vehicle = dronekit.connect(connection_string, wait_ready=True)
+		self._vehicle = dronekit.connect(connection_string, wait_ready=False)
 		self._px4_set_mode(8) #Guided mode
 
 		super(DroneController, self).__init__()
@@ -62,6 +62,16 @@ class DroneController(threading.Thread):
  			while self._vehicle.armed:
  				print("Waiting for disarming...")
  				time.sleep(1)
+ 		elif payload['cmd'] == 'TAKEOFF':
+ 			if self._vehicle.armed:
+ 				self._vehicle.simple_takeoff(payload['target_altitude'])
+
+ 				while self._vehicle.location.global_relative_frame.alt <= payload['target_altitude']*0.95:
+ 					time.sleep(1)
+
+ 		elif payload['cmd'] == 'LAND':
+ 			self._vehicle.mode = dronekit.VehicleMode('LAND')
+ 			time.sleep(1)
 
  		else:
  			print("Unknown command{0}".format(cmd))
