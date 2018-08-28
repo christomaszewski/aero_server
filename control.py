@@ -73,21 +73,39 @@ class DroneController(threading.Thread):
 
  			if self._vehicle.armed:
  				#self._vehicle.simple_takeoff(payload['target_altitude'])
- 				current_pos = self._vehicle.location.global_relative_frame.alt
+ 				current_pos = self._vehicle.location.global_relative_frame
  				self._vehicle._master.mav.command_long_send(self._vehicle._master.target_system, self._vehicle._master.target_component,
  																	mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0,
- 																	1, 0, 0, 0, current_pos.lat, current_pos.lon, payload['target_altitude'])
+ 																	1, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt + payload['target_altitude'])
  				print("taking off to target altitude {0}".format(payload['target_altitude']))
- 				while self._is_alive and self._vehicle.location.global_relative_frame.alt <= payload['target_altitude']*0.95:
+ 				while self._is_alive and self._vehicle.location.global_relative_frame.alt <= payload['target_altitude']*0.90:
  					print("Current altitude: {0}".format(self._vehicle.location.global_relative_frame.alt))
  					time.sleep(1)
 
  				print("Takeoff complete")
 
  		elif payload['cmd'] == 'LAND':
- 			self._vehicle.mode = dronekit.VehicleMode('LAND')
+ 			self._px4_set_mode(8) #Guided mode
+
+ 			current_pos = self._vehicle.location.global_relative_frame
+ 			self._vehicle._master.mav.command_long_send(self._vehicle._master.target_system, self._vehicle._master.target_component,
+ 																	mavutil.mavlink.MAV_CMD_NAV_LAND, 0,
+ 																	1, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt)
  			time.sleep(1)
 
+ 		elif payload['cmd'] == 'WAYPOINT':
+ 			wp_lat = payload['LATITUDE']
+ 			wp_lon = payload['LONGITUDE']
+ 			wp_alt = payload['ALTITUDE']
+
+ 			self._px4_set_mode(4) #Guided mode
+ 			self._vehicle._master.mav.command_long_send(self._vehicle._master.target_system, self._vehicle._master.target_component,
+														mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0,
+														1, 0, 0, 0, wp_lat, wp_lon, wp_alt)
+
+ 			time.sleep(3)
+
+  			
  		else:
  			print("Unknown command{0}".format(cmd))
 

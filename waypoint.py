@@ -31,6 +31,11 @@ jsock.send_obj(takeoff_msg, lambda obj: json.dumps(obj, cls=takeoff_msg.json_enc
 # Hover for 10 seconds
 time.sleep(10)
 
+print("Moving to waypoint")
+jsock.send_obj(wp_msg, lambda obj: json.dumps(obj, cls=wp_msg.json_encoder, indent=2))
+
+time.sleep(20)
+
 print("Landing...")
 jsock.send_obj(land_msg, lambda obj: json.dumps(obj, cls=land_msg.json_encoder, indent=2))
 

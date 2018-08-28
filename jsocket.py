@@ -37,7 +37,7 @@ class JsonSocket:
 		data = bytearray()
 		while len(data) < size:
 			new_data = self._socket.recv(size - len(data))
-			print(new_data)
+			#print(new_data)
 			data.extend(new_data)
 			if new_data == b'':
 				#print("Socket connection broken, handle appropriately")
