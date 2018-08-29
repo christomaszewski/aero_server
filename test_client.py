@@ -1,5 +1,5 @@
 from jsocket import JsonClient
-from messages import Message, MessageEncoder
+from messages import Message
 import json
 
 
@@ -9,10 +9,10 @@ payload = {'data_1':666, 'data_2':'test_data'}
 msg = Message(msg_type, payload)
 
 jsock = JsonClient()
-jsock.connect('192.168.0.142', 6780)
+jsock.connect('192.168.0.142', 6781)
 
 print("Connected, sending message {0}".format(msg))
-jsock.send_obj(msg, lambda obj: json.dumps(obj, cls=msg.json_encoder, indent=2))
+jsock.send_obj(msg, encoder=msg.json_encoder)
 
 #new_message = jsock.read_obj(lambda obj: json.loads(obj, object_hook=MessageEncoder.decode))
 

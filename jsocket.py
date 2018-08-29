@@ -53,8 +53,8 @@ class JsonSocket:
 		return length
 
 
-	def send_obj(self, obj, encode_func=json.dumps):
-		msg = encode_func(obj)
+	def send_obj(self, obj, encoder=json.JSONEncoder):
+		msg = json.dumps(obj, cls=encoder, indent=2)
 
 		if self._socket:
 			print(len(msg), len(msg.encode('utf-8')))
@@ -71,7 +71,7 @@ class JsonSocket:
 			print("Sending packed message {0}".format(msg_packed))
 			self._send(msg_packed)
 
-	def read_obj(self, decode_func=json.loads):
+	def read_obj(self, decoder=json.JSONDecoder):
 		size = self._msg_length()
 		data = self._read(size)
 		# Python 3
@@ -79,7 +79,7 @@ class JsonSocket:
 		format_str = "={0}s".format(size)
 		msg = struct.unpack(format_str, data)[0]
 
-		return decode_func(msg)
+		return json.loads(msg, cls=decoder)
 
 	def close(self):
 		self._socket.close()

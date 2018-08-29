@@ -4,8 +4,8 @@ import json
 import time
 
 msg_type = 'CMD'
-arm_payload = {'cmd':'ARM_DISARM', 'value':'ARM'}
-disarm_payload = {'cmd':'ARM_DISARM', 'value':'DISARM'}
+arm_payload = {'cmd':'ARM'}
+disarm_payload = {'cmd':'DISARM'}
 takeoff_payload = {'cmd':'TAKEOFF', 'target_altitude':2.5}
 land_payload = {'cmd':'LAND'}
 wp_payload = {'cmd':'WAYPOINT', 'LATITUDE':40.5993701, 'LONGITUDE':-80.0091235, 'ALTITUDE':3.0}
@@ -38,12 +38,6 @@ time.sleep(20)
 
 print("Landing...")
 jsock.send_obj(land_msg, lambda obj: json.dumps(obj, cls=land_msg.json_encoder, indent=2))
-
-# Make sure drone has landed before disarming
-#time.sleep(10)
-
-# Don't send disarm for now until landing is demonstrated
-#jsock.send_obj(disarm_msg, lambda obj: json.dumps(obj, cls=disarm_msg.json_encoder, indent=2))
 
 time.sleep(3)
 

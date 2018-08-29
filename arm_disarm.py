@@ -4,8 +4,8 @@ import json
 import time
 
 msg_type = 'CMD'
-arm_payload = {'cmd':'ARM_DISARM', 'value':'ARM'}
-disarm_payload = {'cmd':'ARM_DISARM', 'value':'DISARM'}
+arm_payload = {'cmd':'ARM'}
+disarm_payload = {'cmd':'DISARM'}
 
 arm_msg = Message(msg_type, arm_payload)
 disarm_msg = Message(msg_type, disarm_payload)

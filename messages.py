@@ -2,25 +2,36 @@ import json
 
 class MessageEncoder(json.JSONEncoder):
 
-	def default(self, data):
-		# Python 3
-		#return {'type':data.type, **data.payload}
+	def default(self, obj):
+		if isinstance(obj, Message):
+			# Python 3
+			#return {'type':obj.type, **obj.payload}
 
-		dict_rep = dict(data.payload)
-		dict_rep['type'] = data.type
+			dict_rep = dict(obj.payload)
+			dict_rep['type'] = obj.type
 
-		return dict_rep
+			return dict_rep
+		else:
+			return super(MessageDecoder, self).default(obj)
 
-	@classmethod
-	def decode(cls, json_dict):
-		msg_type = json_dict['type']
-		del json_dict['type']
 
-		return Message(msg_type, json_dict)
+class MessageDecoder(json.JSONDecoder):
+
+	def __init__(self, *args, **kwargs):
+		super(MessageDecoder, self).__init__(object_hook=self.object_hook, *args, **kwargs)
+
+	def object_hook(self, obj):
+		if 'type' not in obj:
+			return obj
+
+		msg_type = obj['type']
+		del obj['type']
+
+		return Message(msg_type, obj)
 
 
 class Message(object):
-
+	json_decoder = MessageDecoder
 	json_encoder = MessageEncoder
 
 	def __init__(self, msg_type, payload):
@@ -37,4 +48,3 @@ class Message(object):
 	@property
 	def payload(self):
 		return self._payload
-	
