@@ -1,10 +1,11 @@
 from jsocket import JsonServer
 import Queue
 from control import DroneController
-from messages import MessageEncoder
+from messages import Message
 import json
 import sys
 import signal
+
 
 # Create command queue 
 cmd_queue = Queue.Queue()
@@ -15,19 +16,19 @@ control_thread.start()
 
 # Setup json server to receive commands and push them to cmd queue
 jserver = JsonServer()
-jserver.bind("192.168.0.142", 6780)
+jserver.bind('', 6760)
 jserver.listen()
 
 
 # Add signal handler to kill all threads
-def signal_handler(sig, frame):
+def clean_shutdown(sig, frame):
 	print("Server shutting down...")
 	control_thread.stop()
 	jserver.close()
 	control_thread.join()
 	sys.exit(0)
 
-signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGINT, clean_shutdown)
 
 
 while True:
@@ -36,7 +37,7 @@ while True:
 	# Todo spawn separate thread to handle parsing the message and pushing it to the queue
 	with jsock:
 		while True:
-			message = jsock.read_obj(lambda msg: json.loads(msg, object_hook=MessageEncoder.decode))
+			message = jsock.read_obj(decoder=Message.json_decoder)
 
 			#Todo maybe parse commands here?
 			if message.type == 'CMD':
