@@ -3,7 +3,7 @@ from messages import Message
 import json 
 
 jserver = JsonServer()
-jserver.bind('192.168.0.142', 6781)
+jserver.bind('', 6760)
 jserver.listen()
 
 jsock = jserver.accept()

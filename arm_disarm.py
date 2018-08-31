@@ -1,5 +1,5 @@
 from jsocket import JsonClient
-from messages import Message, MessageEncoder
+from messages import Message
 import json
 import time
 
@@ -11,14 +11,14 @@ arm_msg = Message(msg_type, arm_payload)
 disarm_msg = Message(msg_type, disarm_payload)
 
 jsock = JsonClient()
-jsock.connect('192.168.1.201', 6780)
+jsock.connect('172.16.0.123', 6760)
 
 print("Connected, sending arm message {0}".format(arm_msg))
-jsock.send_obj(arm_msg, lambda obj: json.dumps(obj, cls=arm_msg.json_encoder, indent=2))
+jsock.send_obj(arm_msg, encoder=arm_msg.json_encoder)
 
 time.sleep(15)
 
-jsock.send_obj(disarm_msg, lambda obj: json.dumps(obj, cls=disarm_msg.json_encoder, indent=2))
+jsock.send_obj(disarm_msg, encoder=disarm_msg.json_encoder)
 
 time.sleep(3)
 

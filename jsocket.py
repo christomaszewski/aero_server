@@ -1,13 +1,8 @@
-import abc
 import json
 import socket
 import struct
 
-# Python 3
-#class JsonSocket(abc.ABC)
-class JsonSocket:
-	__metaclass__ = abc.ABCMeta
-
+class JsonSocket(object):
 	def __init__(self, sock=None):
 		if sock is None:
 			self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

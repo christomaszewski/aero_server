@@ -9,7 +9,7 @@ payload = {'data_1':666, 'data_2':'test_data'}
 msg = Message(msg_type, payload)
 
 jsock = JsonClient()
-jsock.connect('192.168.0.142', 6781)
+jsock.connect('192.168.0.142', 6760)
 
 print("Connected, sending message {0}".format(msg))
 jsock.send_obj(msg, encoder=msg.json_encoder)
