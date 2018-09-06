@@ -43,5 +43,12 @@ while True:
 			if message.type == 'CMD':
 				cmd_queue.put(message)
 				print("Got Command {0}. Pushed to command queue".format(message))
+
+			elif message.type == 'CTRL':
+				if payload['cmd'] == 'INTERRUPT':
+					control_thread.interrupt()
+				elif payload['cmd'] == 'RESUME':
+					control_thread.resume()
+					
 			else:
 				print("Got unrecognized message {0}".format(message))

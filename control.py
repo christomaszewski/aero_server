@@ -10,7 +10,8 @@ PX4_AUTO = 4
 MAV_CMD = {'TAKEOFF':mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 
 				'WAYPOINT':mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
 				'LAND':mavutil.mavlink.MAV_CMD_NAV_LAND,
-				'MODE':mavutil.mavlink.MAV_CMD_DO_SET_MODE}
+				'MODE':mavutil.mavlink.MAV_CMD_DO_SET_MODE,
+				'OVERRIDE':mavutil.mavlink.MAV_CMD_OVERRIDE_GOTO}
 
 class DroneController(threading.Thread):
 
@@ -49,6 +50,19 @@ class DroneController(threading.Thread):
 
 	def stop(self):
 		self._is_alive = False
+
+	def interrupt(self):
+		self._is_interrupted = True
+		current_pos = self._vehicle.location.global_relative_frame
+		arg_list = [mavutil.mavlink.MAV_GOTO_DO_HOLD, mavutil.mavlink.MAV_GOTO_HOLD_AT_CURRENT_POSITION, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt]
+		#arg_list = [mavutil.mavlink.MAV_GOTO_DO_HOLD, mavutil.mavlink.MAV_GOTO_HOLD_AT_CURRENT_POSITION, 0, 0, 0, 0, 0]
+		self._send_command(MAV_CMD['OVERRIDE'], *arg_list)
+
+	def resume(self):
+		arg_list = [mavutil.mavlink.MAV_GOTO_DO_CONTINUE, 0, 0, 0, 0, 0, 0]
+		self._send_command(MAV_CMD['OVERRIDE'], *arg_list)
+
+		self._is_interrupted = False
 
 	def _is_running(self):
 		return self._is_alive and not self._is_interrupted
