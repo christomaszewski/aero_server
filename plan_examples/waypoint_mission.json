@@ -1,0 +1,3 @@
+{"cmd": "ARM", "type": "CMD"}
+{"cmd": "MISSION", "type": "CMD", "cmd_list": [{"latitude": 40.5993701, "altitude": 3.0, "cmd": "WAYPOINT", "longitude": -80.0091235}, {"latitude": 40.5993701, "altitude": 3.0, "cmd": "WAYPOINT", "longitude": -80.0091235}, {"latitude": 40.5993701, "altitude": 3.0, "cmd": "WAYPOINT", "longitude": -80.0091235}]}
+{"cmd": "LAND", "type": "CMD"}

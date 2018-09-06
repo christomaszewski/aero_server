@@ -8,7 +8,7 @@ arm_payload = {'cmd':'ARM'}
 disarm_payload = {'cmd':'DISARM'}
 takeoff_payload = {'cmd':'TAKEOFF', 'target_altitude':2.5}
 land_payload = {'cmd':'LAND'}
-wp_payload = {'cmd':'WAYPOINT', 'LATITUDE':40.5993701, 'LONGITUDE':-80.0091235, 'ALTITUDE':3.0}
+wp_payload = {'cmd':'WAYPOINT', 'latitude':40.5993701, 'longitude':-80.0091235, 'altitude':3.0}
 
 
 arm_msg = Message(msg_type, arm_payload)

@@ -129,11 +129,41 @@ class DroneController(threading.Thread):
 
 		elif payload['cmd'] == 'WAYPOINT':
 
-			self._px4_set_mode(PX4_AUTO) #Guided mode
-			arg_list = [1, 0, 0, 0, payload['LATITUDE'], payload['LONGITUDE'], payload['ALTITUDE']]
+			self._px4_set_mode(PX4_AUTO) #Auto mode
+			arg_list = [1, 0, 0, 0, payload['latitude'], payload['longitude'], payload['altitude']]
 			self._send_command(MAV_CMD['WAYPOINT'], *arg_list)
 
 			time.sleep(3)
+
+		elif payload['cmd'] == 'MISSION':
+			self._px4_set_mode(PX4_AUTO) #Auto mode
+
+			cmds = self._vehicle.commands
+			cmds.download()
+			cmds.wait_ready()
+
+			cmds.clear()
+
+			for element in payload['cmd_list']:
+				if element['cmd'] == 'WAYPOINT':
+					cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['WAYPOINT'], 0, 1, 
+													0, 0, 0, 0, element['latitude'], element['longitude'], element['altitude'])
+					cmds.add(cmd)
+
+				elif element['cmd'] == 'TAKEOFF':
+					current_pos = self._vehicle.location.global_relative_frame
+					cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['TAKEOFF'], 0, 1, 
+													0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt + element['target_altitude'])
+					cmds.add(cmd)
+
+				elif element['cmd'] == 'LAND':
+					current_pos = self._vehicle.location.global_relative_frame
+					cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['LAND'], 0, 1, 
+													0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt)
+					cmds.add(cmd)
+
+			cmds.upload()
+			time.sleep(1)
 
 			
 		else:
