@@ -4,6 +4,10 @@ from pymavlink import mavutil
 import Queue
 import time
 
+# Default Waypoint Params
+DEFAULT_RADIUS = 1.0
+DEFAULT_HOLD_TIME = 1.0
+
 PX4_GUIDED = 8
 PX4_AUTO = 4
 
@@ -27,8 +31,10 @@ class DroneController(threading.Thread):
 
 		# Download vehicle commands - needed for home location
 		cmds = self._vehicle.commands
-		cmds.download()
-		cmds.wait_ready()
+		cmds.clear()
+		cmds.upload()
+		#cmds.download()
+		#cmds.wait_ready()
 
 		# Get the home location
 		self._home = self._vehicle.home_location
@@ -121,11 +127,11 @@ class DroneController(threading.Thread):
 			if self._vehicle.armed:
 				#self._vehicle.simple_takeoff(payload['target_altitude'])
 				current_pos = self._vehicle.location.global_relative_frame
-				arg_list = [1, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt + payload['target_altitude']]
+				arg_list = [0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt + payload['target_altitude']]
 				self._send_command(MAV_CMD['TAKEOFF'], *arg_list)
 				
 				print("taking off to target altitude {0}".format(payload['target_altitude']))
-				while self._is_running() and self._vehicle.location.global_relative_frame.alt <= payload['target_altitude']*0.90:
+				while self._is_running() and self._vehicle.location.global_relative_frame.alt <= payload['target_altitude']*0.70:
 					print("Current altitude: {0}".format(self._vehicle.location.global_relative_frame.alt))
 					time.sleep(1)
 
@@ -136,16 +142,18 @@ class DroneController(threading.Thread):
 
 			current_pos = self._vehicle.location.global_relative_frame
 			
-			arg_list = [1, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt]
+			arg_list = [0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt]
 			self._send_command(MAV_CMD['LAND'], *arg_list)
 
 			time.sleep(1)
 
 		elif payload['cmd'] == 'WAYPOINT':
-
 			self._px4_set_mode(PX4_AUTO) #Auto mode
-			arg_list = [1, 0, 0, 0, payload['latitude'], payload['longitude'], payload['altitude']]
-			self._send_command(MAV_CMD['WAYPOINT'], *arg_list)
+
+			self._waypoint(**payload)
+
+			#arg_list = [1, 0, 0, 0, payload['latitude'], payload['longitude'], payload['altitude']]
+			#self._send_command(MAV_CMD['WAYPOINT'], *arg_list)
 
 			time.sleep(3)
 
@@ -153,15 +161,15 @@ class DroneController(threading.Thread):
 			self._px4_set_mode(PX4_AUTO) #Auto mode
 
 			cmds = self._vehicle.commands
-			cmds.download()
-			cmds.wait_ready()
+			#cmds.download()
+			#cmds.wait_ready()
 
 			cmds.clear()
 
 			for element in payload['cmd_list']:
 				if element['cmd'] == 'WAYPOINT':
 					cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['WAYPOINT'], 0, 1, 
-													0, 0, 0, 0, element['latitude'], element['longitude'], element['altitude'])
+													DEFAULT_HOLD_TIME, DEFAULT_RADIUS, 0, 0, element['latitude'], element['longitude'], element['altitude'])
 					cmds.add(cmd)
 
 				elif element['cmd'] == 'TAKEOFF':
@@ -182,6 +190,10 @@ class DroneController(threading.Thread):
 			
 		else:
 			print("Unknown command{0}".format(cmd))
+
+	def _waypoint(self, latitude, longitude, altitude, radius=DEFAULT_RADIUS, hold_time=DEFAULT_HOLD_TIME):
+		arg_list = [hold_time, radius, 0, 0, payload['latitude'], payload['longitude'], payload['altitude']]
+		self._send_command(MAV_CMD['WAYPOINT'], *arg_list)
 
 	def _px4_set_mode(self, mode):
 		arg_list = [mode, 0, 0, 0, 0, 0, 0]
