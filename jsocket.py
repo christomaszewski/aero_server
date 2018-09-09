@@ -3,9 +3,13 @@ import socket
 import struct
 
 class JsonSocket(object):
-	def __init__(self, sock=None):
+	def __init__(self, sock=None,udp=False):
 		if sock is None:
-			self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        if udp == False:
+			        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                print "TCP SOCKET"
+                        else:
+                                self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		else:
 			self._socket = sock
 
@@ -120,10 +124,10 @@ class JsonServer(JsonSocket):
 
 class JsonClient(JsonSocket):
 
-	def __init__(self, address=None, port=None):
+	def __init__(self, address=None, port=None,_udp=False):
 		# Python 3
 		#super().__init__()
-		super(JsonClient, self).__init__()
+		super(JsonClient, self).__init__(udp=_udp)
 
 		self._address = address
 		self._port = port
