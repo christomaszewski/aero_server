@@ -8,7 +8,7 @@ import Queue
 import json
 import ast
 import sys
-
+import time
 
 class TelemetrySender(object):
 
@@ -30,13 +30,15 @@ class TelemetrySender(object):
     def message_dispatch(self,message_queue):
         print 'attempting to connect to ', self.server_ip
         jsock = JsonClient(_udp=True)
+
         try:
             jsock.connect(self.server_ip, 6780)
         except:
             print "Socket Refused"
-            sys.exit()
+            sys.exit(1)
 
         print 'connected to ', self.server_ip
+        current_time = lambda: str(int(round(time.time() * 1000)))
         while True:
             if message_queue.empty():
                 pass
@@ -46,10 +48,16 @@ class TelemetrySender(object):
             tag = msg.partition(' ')[0]
             payload = msg.split(' ', 1)[1]
 
-            json_payload =  yaml.load(payload) #converts names into strings from raw values
+            json_payload =  yaml.load(payload) #converts to dict
+            json_payload['time'] = current_time() #add timestamp
 
             net_msg = Message(tag,json_payload)
-            jsock.send_obj(net_msg, lambda obj: json.dumps(obj, cls=net_msg.json_encoder, indent=2))
+
+            try:
+                jsock.send_obj(net_msg, encoder=Message.json_encoder)
+            except:
+                #print 'connection down'
+                pass
 
     def get_messages(self,message_queue):
         mav = mavutil.mavlink_connection('tcp:127.0.0.1:5760')
@@ -61,11 +69,7 @@ class TelemetrySender(object):
                 pass
             message_queue.put(msg)
 
-
-
-
-
 #init_message_dispatch()
 #t = TelemetrySender('192.168.0.132')
-t = TelemetrySender('127.0.0.1')
+t = TelemetrySender('192.168.0.132')
 t.init_message_dispatch()
