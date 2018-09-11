@@ -106,7 +106,11 @@ class DroneController(threading.Thread):
 		cmd_func_name = "_{0}".format(cmd.lower())
 		cmd_func = getattr(self, cmd_func_name, lambda **kwargs: self._error(cmd, **kwargs))
 
-		cmd_func(**payload)
+		try:
+			cmd_func(**payload)
+		except:
+			print("An exception occurred while processing command {0}".format(msg))
+
 
 	# Processes unrecognized commmands
 	def _error(self, cmd, **cmd_args):
@@ -132,15 +136,33 @@ class DroneController(threading.Thread):
 			time.sleep(1)
 			self._vehicle.armed = False
 
-	def _takeoff(self, target_altitude=2.5, **unknown_options):
-		current_pos = self._vehicle.location.global_relative_frame
-		arg_list = [0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt + target_altitude]
-		self._send_command(MAV_CMD['TAKEOFF'], *arg_list)
+	def _takeoff(self, target_altitude=2.5, latitude=None, longitude=None, **unknown_options):
+		altitude = 0.0
+		# If not given a latitude and longitude, takeoff at current position
+		if latitude is None or longitude is None:
+			current_pos = self._vehicle.location.global_relative_frame
+			latitude = current_pos.lat
+			longitude = current_pos.lon
+			altitude = current_pos.alt
 
-	def _land(self, **unknown_options):
-		current_pos = self._vehicle.location.global_relative_frame
-		arg_list = [0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt]
-		self._send_command(MAV_CMD['LAND'], *arg_list)
+		if latitude is not None and longitude is not None:
+			arg_list = [0, 0, 0, 0, latitude, longitude, altitude + target_altitude]
+			self._send_command(MAV_CMD['TAKEOFF'], *arg_list)
+		else:
+			print("No takeoff location specified and no GPS data available.")
+
+	def _land(self, latitude=None, longitude=None, ground_level=0.0, **unknown_options):
+		if latitude is None or longitude is None:
+			# Use current location
+			current_pos = self._vehicle.location.global_relative_frame
+			latitude = current_pos.lat
+			longitude = current_pos.lon
+
+		if latitude is not None and longitude is not None:
+			arg_list = [0, 0, 0, 0, latitude, longitude, ground_level]
+			self._send_command(MAV_CMD['LAND'], *arg_list)
+		else:
+			print("No landing location specified and no GPS data available.")
 
 	def _waypoint(self, latitude, longitude, altitude, radius=DEFAULT_RADIUS, hold_time=DEFAULT_HOLD_TIME, **unknown_options):
 		arg_list = [hold_time, radius, 0, 0, latitude, longitude, altitude]

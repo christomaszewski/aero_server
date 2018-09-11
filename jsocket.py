@@ -5,11 +5,10 @@ import struct
 class JsonSocket(object):
 	def __init__(self, sock=None,udp=False):
 		if sock is None:
-                        if udp == False:
-			        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                                print "TCP SOCKET"
-                        else:
-                                self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+			if udp == False:
+				self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			else:
+				self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		else:
 			self._socket = sock
 
@@ -29,9 +28,9 @@ class JsonSocket(object):
 
 	def _send(self, msg):
 		sent = 0
-                print ('msg length is ', len(msg))
+		print ('msg length is ', len(msg))
 		while sent < len(msg):
-                        print (msg[sent:])
+			print (msg[sent:])
 			sent += self._socket.send(msg[sent:])
 
 	def _read(self, size):
@@ -66,11 +65,11 @@ class JsonSocket(object):
 			msg_length = len(msg)
 			header_packed = struct.pack(format_str,msg_length,msg)
 			#msg_length.to_bytes(self._header_size, byteorder='big')
-                        
+
 			print("Sending packed header {0}".format(header_packed))
 			self._send(header_packed)
 			# print("Sending packed message bytes {0}".format(msg_packed))
-                        # print("bytes are ", list(bytearray(msg_packed)))
+			# print("bytes are ", list(bytearray(msg_packed)))
 			# self._send(msg_packed)
 
 	def read_obj(self, decoder=json.JSONDecoder):
