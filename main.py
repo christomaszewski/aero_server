@@ -1,7 +1,7 @@
 from jsocket import JsonServer
 import Queue
 from control import DroneController
-from command import CommandParser
+from command import CommandParser, MessageDispatcher
 from messages import Message
 import json
 import sys
