@@ -5,7 +5,7 @@ import Queue
 import time
 
 # Default Waypoint Params
-DEFAULT_RADIUS = 1.0
+DEFAULT_RADIUS = 5.0
 DEFAULT_HOLD_TIME = 1.0
 
 # Default Failsafe Params
