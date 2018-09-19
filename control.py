@@ -22,8 +22,9 @@ MAV_MODE = {'GUIDED':8, 'AUTO':4}
 
 class DroneController(threading.Thread):
 
-	def  __init__(self, cmd_queue):
+	def  __init__(self, cmd_queue, response_queue):
 		self._cmd_queue  = cmd_queue
+		self._response_queue = response_queue
 		self._current_command = None
 		self._is_alive = False
 		self._is_interrupted = False

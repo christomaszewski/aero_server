@@ -1,6 +1,8 @@
 #!/usr/bin/python
 from messages import Message, MessageEncoder
-from jsocket import JsonClient
+from jsocket import JsonClient, MulticastJsonClient
+from collections import defaultdict
+import itertools
 import pymavlink.mavutil as mavutil
 import threading
 import yaml
@@ -14,8 +16,10 @@ class TelemetrySender(object):
 
 	server_ip = None
 
-	def __init__(self,ipaddr):
+	def __init__(self, ipaddr):
 		self.server_ip = ipaddr
+
+
 
 	def init_message_dispatch(self):
 		message_queue = Queue.Queue()
@@ -30,19 +34,19 @@ class TelemetrySender(object):
 	def message_dispatch(self,message_queue):
 		ready = False
 		while not ready:
-			print 'attempting to connect to ', self.server_ip
-			jsock = JsonClient(_udp=True)
-
+			print('attempting to connect to ', self.server_ip)
+			jsock = JsonClient(use_udp=True)
+			#jsock = MulticastJsonClient()
 			try:
 				jsock.connect(self.server_ip, 6780)
 				ready = True
 			except:
-				print "Socket Refused"
+				print("Socket Refused")
 				time.sleep(5)
 
 
 
-		print 'connected to ', self.server_ip
+		print('connected to ', self.server_ip)
 		current_time = lambda: str(int(round(time.time() * 1000)))
 		while True:
 			if message_queue.empty():
@@ -61,20 +65,26 @@ class TelemetrySender(object):
 			try:
 				jsock.send_obj(net_msg, encoder=Message.json_encoder)
 			except:
-				#print 'connection down'
+				#print('connection down')
 				pass
 
 	def get_messages(self,message_queue):
 		mav = mavutil.mavlink_connection('tcp:127.0.0.1:5760')
 		mav.wait_heartbeat()
 
+		types_of_interest = ['GLOBAL_POSITION_INT']
+		msg_count = {t:0 for t in types_of_interest}
+		msg_send_rate = defaultdict(itertools.repeat(1).next, {'GLOBAL_POSITION_INT':20})
+
 		while True:
-			msg = mav.recv_match(blocking=True)
-			if msg is None:
-				pass
-			message_queue.put(msg)
+			msg = mav.recv_match(type=types_of_interest, blocking=True)
+			msg_type = msg.get_type()
+			if msg is not None and msg_count[msg_type] % msg_send_rate[msg_type] == 0:
+				message_queue.put(msg)
+
+			msg_count[msg_type] += 1
 
 #init_message_dispatch()
-#t = TelemetrySender('192.168.0.132')
 t = TelemetrySender('192.168.0.132')
+#t = TelemetrySender('224.0.0.150')
 t.init_message_dispatch()

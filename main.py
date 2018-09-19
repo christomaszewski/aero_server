@@ -16,7 +16,7 @@ cmd_queue = Queue.Queue()
 response_queue = Queue.Queue()
 
 # Spawn control thread and pass queue reference
-control_thread = DroneController(cmd_queue)
+control_thread = DroneController(cmd_queue, response_queue)
 control_thread.start()
 
 # Setup json server to receive commands and push them to cmd queue
