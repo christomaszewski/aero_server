@@ -88,7 +88,7 @@ class DroneController(threading.Thread):
 				# process hold command
 				print("Control thread interrupted")
 				time.sleep(3)
-			elif time.time() - self._last_heartbeat > DEFAULT_HEARTBEAT_TIMEOUT:
+			elif self._vehicle.armed and time.time() - self._last_heartbeat > DEFAULT_HEARTBEAT_TIMEOUT:
 				print("Lost heartbeat, executing failsafe behavior")
 
 				self._is_interrupted = True
