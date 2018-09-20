@@ -8,9 +8,6 @@ import sys
 import signal
 import time
 
-# Initialize Settings (Todo: Read in from file)
-server_settings = {'rally_point':None}
-
 # Create command and response queues
 cmd_queue = Queue.Queue()
 response_queue = Queue.Queue()
