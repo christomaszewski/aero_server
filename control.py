@@ -5,12 +5,12 @@ import Queue
 import time
 
 # Default Waypoint Params
-DEFAULT_RADIUS = 5.0
+DEFAULT_RADIUS = 1.0
 DEFAULT_HOLD_TIME = 1.0
 
 # Default Failsafe Params
-DEFAULT_HEARTBEAT_TIMEOUT = 20.0
-DEFAULT_FAILSAFE_MISSION = [{"latitude": 40.599374, "altitude": 3.0, "cmd": "WAYPOINT", "longitude": -80.009048},{"cmd": "LAND"}]
+DEFAULT_HEARTBEAT_TIMEOUT = 10.0
+DEFAULT_FAILSAFE_MISSION = [{"latitude": 40.5993520, "altitude": 3.0, "cmd": "WAYPOINT", "longitude": -80.0092670},{"cmd":"LAND"}] #{"cmd": "LAND", "latitude": 40.5993520, "longitude": -80.0092670}]
 
 MAV_CMD = {'TAKEOFF':mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 
 				'WAYPOINT':mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
@@ -103,7 +103,7 @@ class DroneController(threading.Thread):
 					cmd = None
 
 				self._current_command = cmd
-
+				print("Processing command {0}".format(cmd))
 				if cmd is not None:
 					self._process_command(cmd)
 
@@ -201,9 +201,21 @@ class DroneController(threading.Thread):
 				cmds.add(cmd)
 
 			elif element['cmd'] == 'LAND':
-				current_pos = self._vehicle.location.global_relative_frame
+				print("Parsing land mission element")
+				lat = 0
+				lon = 0
+				if 'latitude' in element and 'longitude' in element:
+					lat = element['latitude']
+					lon = element['longitude']
+				
+				if lat is None or lon is None:
+					current_pos = self._vehicle.location.global_relative_frame
+					lat = 0.0
+					lon = 0.0
+
 				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['LAND'], 0, 1, 
-												0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt)
+												0, 0, 0, 0, lat, lon, 0.0)
+				print("Adding land to mission")
 				cmds.add(cmd)
 
 		cmds.upload()

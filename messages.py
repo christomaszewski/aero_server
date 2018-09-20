@@ -37,6 +37,8 @@ class Message(object):
 	def __init__(self, msg_type, payload):
 		self._type = msg_type
 		self._payload = payload
+	def __repr__(self):
+		return "{._type} {._payload}".format(self, self)
 
 	def __str__(self):
 		return "{._type} {._payload}".format(self, self)
