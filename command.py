@@ -33,7 +33,9 @@ class CommandParser(threading.Thread):
 					print("Got Command {0}. Pushed to command queue".format(message))
 
 				elif message.type == 'CTRL':
-					if payload['cmd'] == 'INTERRUPT' or payload['cmd'] == 'SAFETY_STOP':
+					if payload['cmd'] == 'SAFETY_STOP':
+						self._control_thread.safety_behavior()
+					if payload['cmd'] == 'INTERRUPT':
 						self._control_thread.interrupt()
 					elif payload['cmd'] == 'RESUME':
 						self._control_thread.resume()

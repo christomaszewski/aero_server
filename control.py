@@ -61,6 +61,15 @@ class DroneController(threading.Thread):
 	def stop(self):
 		self._is_alive = False
 
+	def saftey_behavior(self):
+		self._is_interrupted = True
+		self._mode('GUIDED')
+		
+		self._mission(DEFAULT_FAILSAFE_MISSION)
+		# Try this next line to skip over HOME at front of mission
+		#self._vehicle.commands.next = 1
+		self._mode('AUTO')
+
 	def interrupt(self):
 		self._is_interrupted = True
 		current_pos = self._vehicle.location.global_relative_frame
