@@ -1,2 +1,4 @@
+{"cmd": "HEARTBEAT", "type": "CTRL"}
 {"cmd": "ARM", "type": "CMD"}
+{"cmd": "HEARTBEAT", "type": "CTRL"}
 {"cmd": "DISARM", "type": "CMD"}

@@ -3,7 +3,7 @@ import socket
 import struct
 
 class JsonSocket(object):
-	def __init__(self, sock=None,udp=False):
+	def __init__(self, sock=None, udp=False):
 		if sock is None:
 			if udp == False:
 				self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -63,11 +63,11 @@ class JsonSocket(object):
 			format_str = "!H{0}s".format(len(msg))
 			# msg_packed = struct.pack(format_str, msg.encode('utf-8'))
 			msg_length = len(msg)
-			header_packed = struct.pack(format_str,msg_length,msg)
+			msg_packed = struct.pack(format_str,msg_length,msg)
 			#msg_length.to_bytes(self._header_size, byteorder='big')
 
-			print("Sending packed header {0}".format(header_packed))
-			self._send(header_packed)
+			print("Sending packed message {0}".format(msg_packed))
+			self._send(msg_packed)
 			# print("Sending packed message bytes {0}".format(msg_packed))
 			# print("bytes are ", list(bytearray(msg_packed)))
 			# self._send(msg_packed)
@@ -126,10 +126,10 @@ class JsonServer(JsonSocket):
 
 class JsonClient(JsonSocket):
 
-	def __init__(self, address=None, port=None,_udp=False):
+	def __init__(self, address=None, port=None, use_udp=False):
 		# Python 3
 		#super().__init__()
-		super(JsonClient, self).__init__(udp=_udp)
+		super(JsonClient, self).__init__(udp=use_udp)
 
 		self._address = address
 		self._port = port
@@ -139,3 +139,30 @@ class JsonClient(JsonSocket):
 
 		self._address = address
 		self._port = port
+
+class MulticastJsonClient(JsonSocket):
+
+	def __init__(self, address=None, port=None):
+		super(MulticastJsonClient, self).__init__(udp=True)
+
+		ttl = struct.pack('b', 1)
+		self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+
+	def connect(self, address, port):
+		self._address = address
+		self._port = port
+
+	def _send_to(self, msg, address, port):
+		sent = 0
+		while sent < len(msg):
+			sent += self._socket.sendto(msg[sent:], (address, port))
+
+	def send_obj(self, obj, encoder=json.JSONEncoder):
+		msg = json.dumps(obj, cls=encoder, indent=2)
+
+		format_str = "!H{0}s".format(len(msg))
+		msg_length = len(msg)
+		msg_packed = struct.pack(format_str,msg_length,msg)
+
+		print("Sending packed message {0}".format(msg_packed))
+		self._send_to(msg_packed, self._address, self._port)
