@@ -272,9 +272,10 @@ class DroneController(threading.Thread):
 				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['LAND'], 0, 1, 
 												0, 0, 0, 0, lat, lon, 0.0)
 				cmds.add(cmd)
+		print("Mission parsed, sending mission to flight controller")
 
 		cmds.upload()
-
+		print("Mission sent to flight controller successfully")
 
 	def _legacy_process_command(self, cmd):
 		if cmd.type != 'CMD':
