@@ -61,13 +61,14 @@ class DroneController(threading.Thread):
 	def stop(self):
 		self._is_alive = False
 
-	def saftey_behavior(self):
+	def safety_behavior(self):
 		self._is_interrupted = True
 		self._mode('GUIDED')
 		
 		self._mission(DEFAULT_FAILSAFE_MISSION)
-		# Try this next line to skip over HOME at front of mission
-		#self._vehicle.commands.next = 1
+		# This line skips over HOME at front of mission
+		self._vehicle.commands.next = 1
+		
 		self._mode('AUTO')
 
 	def interrupt(self):
@@ -102,10 +103,7 @@ class DroneController(threading.Thread):
 			elif self._vehicle.armed and time.time() - self._last_heartbeat > DEFAULT_HEARTBEAT_TIMEOUT:
 				print("Lost heartbeat, executing failsafe behavior")
 
-				self._is_interrupted = True
-				self._mode('GUIDED')
-				self._mission(DEFAULT_FAILSAFE_MISSION)
-				self._mode('AUTO')
+				self.safety_behavior()
 
 			else:
 				try:
