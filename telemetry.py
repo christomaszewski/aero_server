@@ -38,7 +38,7 @@ class TelemetrySender(object):
 			jsock = JsonClient(use_udp=True)
 			#jsock = MulticastJsonClient()
 			try:
-				jsock.connect(self.server_ip, 6780)
+				jsock.connect(self.server_ip, 6782)
 				ready = True
 			except:
 				print("Socket Refused")
@@ -85,6 +85,6 @@ class TelemetrySender(object):
 			msg_count[msg_type] += 1
 
 #init_message_dispatch()
-t = TelemetrySender('192.168.0.132')
+t = TelemetrySender('192.168.1.56')
 #t = TelemetrySender('224.0.0.150')
 t.init_message_dispatch()
