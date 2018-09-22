@@ -3,6 +3,7 @@ import dronekit
 from pymavlink import mavutil
 import Queue
 import time
+import logging
 
 # Default Waypoint Params
 DEFAULT_RADIUS = 2.5
@@ -29,6 +30,8 @@ class DroneController(threading.Thread):
 		self._current_command = None
 		self._is_alive = False
 		self._is_interrupted = False
+
+		self._logger = logging.getLogger('command_server_log')
 
 		# spin up drone kit, connect to mavlink stream, etc
 		connection_string = 'tcp:127.0.0.1:5760'
@@ -86,22 +89,21 @@ class DroneController(threading.Thread):
 		self._is_interrupted = False
 
 	def update_heartbeat(self, timestamp):
-		print("Got heartbeat update")
+		self._logger.info("Got heartbeat update")
 		self._last_heartbeat = timestamp
 
 	def _is_running(self):
 		return self._is_alive and not self._is_interrupted
 
 	def run(self):
-		print("DroneController running")
+		self._logger.info("DroneController running")
 		self._last_heartbeat = time.time()
 		while self._is_alive:
 			if self._is_interrupted:
-				# process hold command
-				print("Control thread interrupted")
+				self._logger.info("Control thread interrupted")
 				time.sleep(3)
 			elif self._vehicle.armed and time.time() - self._last_heartbeat > DEFAULT_HEARTBEAT_TIMEOUT:
-				print("Lost heartbeat, executing failsafe behavior")
+				self._logger.warning("Lost heartbeat, executing failsafe behavior")
 
 				self.safety_behavior()
 
@@ -110,20 +112,20 @@ class DroneController(threading.Thread):
 					cmd = self._cmd_queue.get(timeout=3)
 				except Queue.Empty as e:
 					#handle empty command queue, add autonomy here
-					print("Command Queue is empty")
+					self._logger.debug("Command Queue is empty")
 					cmd = None
 
 				self._current_command = cmd
-				print("Processing command {0}".format(cmd))
+				self._logger.info("Processing command {0}".format(cmd))
 				if cmd is not None:
 					self._process_command(cmd)
 
 		self._vehicle.close()
-		print("DroneController thread stopped")
+		self._logger.info("DroneController thread stopped")
 
 	def _process_command(self, msg):
 		if msg.type != 'CMD':
-			print("Error tried to process a message that was not a command")
+			self._logger.error("Tried to process a message that was not a command")
 			return
 
 		payload = msg.payload
@@ -135,30 +137,32 @@ class DroneController(threading.Thread):
 		try:
 			cmd_func(**payload)
 		except:
-			print("An exception occurred while processing command {0}".format(msg))
+			self._logger.error("An exception occurred while processing command {0}".format(msg))
 
 
 	# Processes unrecognized commmands
 	def _error(self, cmd, **cmd_args):
-		print("Unknown command {0} with args {1}".format(cmd, cmd_args))
+		self._logger.error("Unknown command {0} with args {1}".format(cmd, cmd_args))
 	
 	def _mode(self, mode, **unknown_options):
 		arg_list = [MAV_MODE[mode], 0, 0, 0, 0, 0, 0]
 		self._send_command(MAV_CMD['MODE'], *arg_list)
 
 	def _arm(self, **unknown_options):
+		self._logger.debug("Arming vehicle")
 		self._vehicle.armed = True
 
 		while self._is_running() and not self._vehicle.armed:
-			print("Waiting for arming...")
+			self._logger.info("Waiting for arming to succeed")
 			time.sleep(1)
 			self._vehicle.armed = True
 
 	def _disarm(self, **unknown_options):
+		self._logger.debug("Disarming vehicle")
 		self._vehicle.armed = False
 
 		while self._is_running() and self._vehicle.armed:
-			print("Waiting for disarming...")
+			self._logger.info("Waiting for disarming to succeed")
 			time.sleep(1)
 			self._vehicle.armed = False
 
@@ -175,7 +179,7 @@ class DroneController(threading.Thread):
 			arg_list = [0, 0, 0, 0, latitude, longitude, altitude + target_altitude]
 			self._send_command(MAV_CMD['TAKEOFF'], *arg_list)
 		else:
-			print("Ignoring TAKEOFF command - No takeoff location specified and no GPS data available.")
+			self._logger.error("Ignoring TAKEOFF command - No takeoff location specified and no GPS data available.")
 
 	def _land(self, latitude=None, longitude=None, ground_level=0.0, **unknown_options):
 		if latitude is None or longitude is None:
@@ -188,7 +192,7 @@ class DroneController(threading.Thread):
 			arg_list = [0, 0, 0, 0, latitude, longitude, ground_level]
 			self._send_command(MAV_CMD['LAND'], *arg_list)
 		else:
-			print("Ignoring LAND command - No landing location specified and no GPS data available.")
+			self._logger.error("Ignoring LAND command - No landing location specified and no GPS data available.")
 
 	def _waypoint(self, latitude, longitude, altitude, radius=DEFAULT_RADIUS, hold_time=DEFAULT_HOLD_TIME, **unknown_options):
 		arg_list = [hold_time, radius, 0, 0, latitude, longitude, altitude]
@@ -202,14 +206,14 @@ class DroneController(threading.Thread):
 		last_command_location = None
 
 		for element in cmd_list:
-			print("Parsing mission element {0}".format(element))
+			self._logger.info("Parsing mission element {0}".format(element))
 			if 'cmd' not in element:
-				print("Rejecting Mission - Malformed mission element (cmd not found): {0}".format(element))
+				self._logger.error("Rejecting Mission - Malformed mission element (cmd not found): {0}".format(element))
 				cmds.clear()
 				break
 			
 			elif element['cmd'] == 'WAYPOINT':
-				print("Parsing WAYPOINT mission element")
+				self._logger.debug("Parsing WAYPOINT mission element")
 				lat = None
 				lon = None
 				alt = None
@@ -227,7 +231,7 @@ class DroneController(threading.Thread):
 
 
 				if lat is None or lon is None or alt is None:
-					print("Rejecting Mission - Malformed mission element WAYPOINT (missing lat, long, or alt): {0}".format(element))
+					self._logger.error("Rejecting Mission - Malformed mission element WAYPOINT (missing lat, long, or alt): {0}".format(element))
 					cmds.clear()
 					break
 
@@ -237,7 +241,7 @@ class DroneController(threading.Thread):
 				cmds.add(cmd)
 
 			elif element['cmd'] == 'TAKEOFF':
-				print("Parsing TAKEOFF mission element")
+				self._logger.debug("Parsing TAKEOFF mission element")
 				target_alt = DEFAULT_TAKEOFF_ALT
 
 				if target_alt in element:
@@ -250,7 +254,7 @@ class DroneController(threading.Thread):
 				cmds.add(cmd)
 
 			elif element['cmd'] == 'LAND':
-				print("Parsing LAND mission element")
+				self._logger.debug("Parsing LAND mission element")
 				lat = None
 				lon = None
 
@@ -272,11 +276,12 @@ class DroneController(threading.Thread):
 				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['LAND'], 0, 1, 
 												0, 0, 0, 0, lat, lon, 0.0)
 				cmds.add(cmd)
-		print("Mission parsed, sending mission to flight controller")
+		
+		self._logger.info("Mission parsed, sending mission to flight controller")
 
 		cmds.upload()
-		
-		print("Mission sent to flight controller successfully")
+
+		self._logger.info("Mission sent to flight controller successfully")
 
 	def _send_command(self, cmd, arg1, arg2, arg3, arg4, arg5, arg6, arg7):
 		self._vehicle._master.mav.command_long_send(self._target_system, self._target_component, cmd, 0,

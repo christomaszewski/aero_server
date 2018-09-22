@@ -7,6 +7,19 @@ import json
 import sys
 import signal
 import time
+import logging
+
+# Initialize and Setup Logger
+logger = logging.getLogger(name='command_server_log')
+logger.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s - %(funcName)s - Line: %(lineno)d - %(message)s')
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
 
 # Create command and response queues
 cmd_queue = Queue.Queue()
@@ -27,7 +40,7 @@ thread_pool = [control_thread]
 
 # Add signal handler to kill all threads
 def clean_shutdown(sig, frame):
-	print("Server shutting down...")
+	logger.info("Server shutting down")
 	for t in thread_pool:
 		t.stop()
 	
@@ -36,6 +49,7 @@ def clean_shutdown(sig, frame):
 	for t in thread_pool:
 		t.join()
 
+	logger.shutdown()
 	sys.exit(0)
 
 signal.signal(signal.SIGINT, clean_shutdown)
@@ -43,6 +57,8 @@ signal.signal(signal.SIGINT, clean_shutdown)
 
 while True:
 	jsock = jserver.accept()
+
+	# Add log message with ip from connected client
 
 	cmd_thread = CommandParser(jsock, cmd_queue, control_thread)
 	cmd_thread.start()
@@ -52,31 +68,3 @@ while True:
 
 	thread_pool.append(cmd_thread)
 	thread_pool.append(response_thread)
-
-	"""
-	# Todo spawn separate thread to handle parsing the message and pushing it to the queue
-	with jsock:
-		while True:
-			message = jsock.read_obj(decoder=Message.json_decoder)
-
-			#Todo maybe parse commands here?
-			if message.type == 'CMD':
-				cmd_queue.put(message)
-				print("Got Command {0}. Pushed to command queue".format(message))
-
-			elif message.type == 'CTRL':
-				if payload['cmd'] == 'INTERRUPT':
-					control_thread.interrupt()
-				elif payload['cmd'] == 'RESUME':
-					control_thread.resume()
-				elif payload['cmd'] == 'HEARTBEAT':
-					control_thread.update_heartbeat(time.time())
-			elif message.type == 'CONFIG':
-				if payload['cmd'] == 'SET':
-					pass
-
-
-					
-			else:
-				print("Got unrecognized message {0}".format(message))
-	"""
