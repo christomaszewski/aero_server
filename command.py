@@ -3,6 +3,7 @@ import Queue
 import time
 from messages import Message
 import logging
+import sys
 
 
 class CommandParser(threading.Thread):
@@ -53,8 +54,13 @@ class CommandParser(threading.Thread):
 					else:
 						self._logger.warning("Got unrecognized message {0}".format(message))
 
+				except Exception as e:
+					name = sys.exc_info()[0]
+					trace = sys.exc_info()[2]
+					self._logger.error("A {0} exception occured while trying to parse message {1}".format(name, message))
+					self._logger.debug("Traceback: {0}".format(trace))
 				except:
-					self._logger.error("An exception occured while trying to parse message {0}".format(message))
+					self._logger.error("An unknown exception occured while trying to parse message {0}".format(message))
 
 class MessageDispatcher(threading.Thread):
 

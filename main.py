@@ -68,3 +68,4 @@ while True:
 
 	thread_pool.append(cmd_thread)
 	thread_pool.append(response_thread)
+	thread_pool = [t for t in thread_pool if t.is_alive()]
