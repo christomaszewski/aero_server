@@ -280,9 +280,8 @@ class DroneController(threading.Thread):
 		self._logger.info("Mission parsed, sending mission to flight controller")
 
 		cmds.upload()
-		
-		self._logger.info("Mission sent to flight controller successfully")
 
+		self._logger.info("Mission sent to flight controller successfully")
 
 	def _send_command(self, cmd, arg1, arg2, arg3, arg4, arg5, arg6, arg7):
 		self._vehicle._master.mav.command_long_send(self._target_system, self._target_component, cmd, 0,
