@@ -4,9 +4,10 @@ from pymavlink import mavutil
 import Queue
 import time
 import logging
+import sys
 
 # Default Waypoint Params
-DEFAULT_RADIUS = 2.5
+DEFAULT_RADIUS = 1.0
 DEFAULT_HOLD_TIME = 1.0
 DEFAULT_TAKEOFF_ALT = 2.5
 
@@ -50,7 +51,7 @@ class DroneController(threading.Thread):
 
 		self._mode('GUIDED')
 
-		self._last_heartbeat = None
+		self._last_heartbeat = time.time()
 
 		super(DroneController, self).__init__()
 
@@ -89,7 +90,7 @@ class DroneController(threading.Thread):
 		self._is_interrupted = False
 
 	def update_heartbeat(self, timestamp):
-		self._logger.info("Got heartbeat update")
+		self._logger.info("Got heartbeat update, time since last heartbeat: {0}".format(timestamp - self._last_heartbeat))
 		self._last_heartbeat = timestamp
 
 	def _is_running(self):
@@ -137,7 +138,7 @@ class DroneController(threading.Thread):
 		try:
 			cmd_func(**payload)
 		except:
-			self._logger.error("An exception occurred while processing command {0}".format(msg))
+			self._logger.error("{0} exception occurred while processing command {1}".format(sys.exc_info()[0], msg))
 
 
 	# Processes unrecognized commmands
@@ -145,8 +146,10 @@ class DroneController(threading.Thread):
 		self._logger.error("Unknown command {0} with args {1}".format(cmd, cmd_args))
 	
 	def _mode(self, mode, **unknown_options):
+		self._logger.debug("Current Mode: {0}, Setting Mode: {1} {2}".format(self._vehicle.mode, mode, MAV_MODE[mode]))
 		arg_list = [MAV_MODE[mode], 0, 0, 0, 0, 0, 0]
 		self._send_command(MAV_CMD['MODE'], *arg_list)
+		self._logger.debug("Mode after set: {0}".format(self._vehicle.mode))
 
 	def _arm(self, **unknown_options):
 		self._logger.debug("Arming vehicle")
@@ -165,6 +168,11 @@ class DroneController(threading.Thread):
 			self._logger.info("Waiting for disarming to succeed")
 			time.sleep(1)
 			self._vehicle.armed = False
+
+		self._logger.debug("Clearing mission")
+		cmds = self._vehicle.commands
+		cmds.clear()
+		cmds.upload()
 
 	def _takeoff(self, target_altitude=2.5, latitude=None, longitude=None, **unknown_options):
 		altitude = 0.0

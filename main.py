@@ -16,7 +16,7 @@ logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
 handler.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s - %(funcName)s - Line: %(lineno)d - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(threadName)s - %(filename)s - %(funcName)s - Line: %(lineno)d - %(message)s')
 handler.setFormatter(formatter)
 
 logger.addHandler(handler)
