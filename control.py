@@ -61,13 +61,13 @@ class DroneController(threading.Thread):
 	def stop(self):
 		self._is_alive = False
 
-	def saftey_behavior(self):
+	def safety_behavior(self):
 		self._is_interrupted = True
 		self._mode('GUIDED')
 		
 		self._mission(DEFAULT_FAILSAFE_MISSION)
 		# Try this next line to skip over HOME at front of mission
-		#self._vehicle.commands.next = 1
+		self._vehicle.commands.next = 1
 		self._mode('AUTO')
 
 	def interrupt(self):
@@ -101,12 +101,14 @@ class DroneController(threading.Thread):
 				time.sleep(3)
 			elif self._vehicle.armed and time.time() - self._last_heartbeat > DEFAULT_HEARTBEAT_TIMEOUT:
 				print("Lost heartbeat, executing failsafe behavior")
-
+				
+				self.safety_behavior()
+				"""
 				self._is_interrupted = True
 				self._mode('GUIDED')
 				self._mission(DEFAULT_FAILSAFE_MISSION)
 				self._mode('AUTO')
-
+				"""
 			else:
 				try:
 					cmd = self._cmd_queue.get(timeout=3)
@@ -274,8 +276,11 @@ class DroneController(threading.Thread):
 				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['LAND'], 0, 1, 
 												0, 0, 0, 0, lat, lon, 0.0)
 				cmds.add(cmd)
-
+		print("Mission Parsing Complete, sending commands to flight controller")
 		cmds.upload()
+
+		print("Advancing waypoint index to skip movement to home position")
+		#self._vehicle.commands.next = 1
 
 
 	def _legacy_process_command(self, cmd):

@@ -25,7 +25,12 @@ class CommandParser(threading.Thread):
 		with self._socket:
 			while self._is_alive:
 				message = self._socket.read_obj(decoder=Message.json_decoder)
-				payload = message.payload
+                                print(message)
+                                try:
+				        payload = message.payload
+                                except:
+                                        print("Caught exception getting message.payload")
+                                        continue
 
 				#Todo maybe parse commands here?
 				if message.type == 'CMD':

@@ -38,7 +38,7 @@ class TelemetrySender(object):
 			jsock = JsonClient(use_udp=True)
 			#jsock = MulticastJsonClient()
 			try:
-				jsock.connect(self.server_ip, 6780)
+				jsock.connect(self.server_ip, 6781)
 				ready = True
 			except:
 				print("Socket Refused")
@@ -72,9 +72,9 @@ class TelemetrySender(object):
 		mav = mavutil.mavlink_connection('tcp:127.0.0.1:5760')
 		mav.wait_heartbeat()
 
-		types_of_interest = ['GLOBAL_POSITION_INT']
+		types_of_interest = ['GLOBAL_POSITION_INT','ATTITUDE','BATTERY_STATUS','COMAND_LONG','HOME_POSITION','MISSION_ITEM_REACHED','STATUSTEXT','SYS_STATUS']
 		msg_count = {t:0 for t in types_of_interest}
-		msg_send_rate = defaultdict(itertools.repeat(1).next, {'GLOBAL_POSITION_INT':20})
+		msg_send_rate = defaultdict(itertools.repeat(1).next, {'GLOBAL_POSITION_INT':20,'ATTITUDE':20,'BATTERY_STATUS':1,'COMAND_LONG':1,'HOME_POSITION':1,'MISSION_ITEM_REACHED':1,'STATUSTEXT':1,'SYS_STATUS':1})
 
 		while True:
 			msg = mav.recv_match(type=types_of_interest, blocking=True)
@@ -85,6 +85,7 @@ class TelemetrySender(object):
 			msg_count[msg_type] += 1
 
 #init_message_dispatch()
-t = TelemetrySender('192.168.0.132')
+#t = TelemetrySender('192.168.0.132')
+t = TelemetrySender('192.168.1.56')
 #t = TelemetrySender('224.0.0.150')
 t.init_message_dispatch()
