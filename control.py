@@ -70,7 +70,7 @@ class DroneController(threading.Thread):
 		
 		self._mission(DEFAULT_FAILSAFE_MISSION)
 		# This line skips over HOME at front of mission
-		self._vehicle.commands.next = 1
+		#self._vehicle.commands.next = 1
 		
 		self._mode('AUTO')
 

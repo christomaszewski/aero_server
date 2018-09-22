@@ -49,7 +49,7 @@ def clean_shutdown(sig, frame):
 	for t in thread_pool:
 		t.join()
 
-	logger.shutdown()
+	logging.shutdown()
 	sys.exit(0)
 
 signal.signal(signal.SIGINT, clean_shutdown)
