@@ -72,9 +72,11 @@ class TelemetrySender(object):
 		mav = mavutil.mavlink_connection('tcp:127.0.0.1:5760')
 		mav.wait_heartbeat()
 
-		types_of_interest = ['GLOBAL_POSITION_INT']
+		types_of_interest = ['GLOBAL_POSITION_INT', 'MISSION_CURRENT', 'PARAM_VALUE', 'ATTITUDE', 'BATTERY_STATUS', 'COMMAND_LONG', 
+									'EXTENDED_SYS_STATE', 'HOME_POSITION', 'MISSION_ITEM_REACHED', 'STATUSTEXT', 'SYS_STATUS']
+
 		msg_count = {t:0 for t in types_of_interest}
-		msg_send_rate = defaultdict(itertools.repeat(1).next, {'GLOBAL_POSITION_INT':20})
+		msg_send_rate = defaultdict(itertools.repeat(1).next, {'GLOBAL_POSITION_INT':20, 'ATTITUDE':20})
 
 		while True:
 			msg = mav.recv_match(type=types_of_interest, blocking=True)
