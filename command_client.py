@@ -20,3 +20,5 @@ with open(mission_file, 'r') as mission:
 		cmd_msg = json.loads(cmd, cls=Message.json_decoder)
 		jsock.send_obj(cmd_msg, encoder=Message.json_encoder)
 		time.sleep(3)
+
+jsock.close()

@@ -4,6 +4,7 @@ import time
 from messages import Message
 import logging
 import sys
+import socket
 
 
 class CommandParser(threading.Thread):
@@ -53,6 +54,10 @@ class CommandParser(threading.Thread):
 							
 					else:
 						self._logger.warning("Got unrecognized message {0}".format(message))
+
+				except socket.error:
+					self._logger.warning("Socket was closed while attempting to read, closing socket and shutting down thread.")
+					self.stop()
 
 				except Exception as e:
 					name = sys.exc_info()[0]
