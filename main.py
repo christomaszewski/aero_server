@@ -63,9 +63,9 @@ while True:
 	cmd_thread = CommandParser(jsock, cmd_queue, control_thread)
 	cmd_thread.start()
 
-	response_thread = MessageDispatcher(jsock, response_queue)
-	response_thread.start()
+	#response_thread = MessageDispatcher(jsock, response_queue)
+	#response_thread.start()
 
 	thread_pool.append(cmd_thread)
-	thread_pool.append(response_thread)
+	#thread_pool.append(response_thread)
 	thread_pool = [t for t in thread_pool if t.is_alive()]

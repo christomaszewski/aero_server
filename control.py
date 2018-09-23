@@ -6,12 +6,18 @@ import time
 import logging
 import sys
 
-# Default Waypoint Params
+# Default system params
+DEFAULT_INTERMISSION = 0.1
+DEFAULT_MISSION_RESEND_LIMIT = 5
+DEFAULT_TAKEOFF_RESENT_LIMIT = 5
+DEFAULT_TAKEOFF_TIMEOUT = 2.0
+
+# Default waypoint params
 DEFAULT_RADIUS = 3.0
 DEFAULT_HOLD_TIME = 1.0
 DEFAULT_TAKEOFF_ALT = 2.5
 
-# Default Failsafe Params
+# Default failsafe params
 DEFAULT_HEARTBEAT_TIMEOUT = 10.0
 DEFAULT_FAILSAFE_MISSION = [{"latitude": 40.5993520, "altitude": 5.0, "cmd": "WAYPOINT", "longitude": -80.0092670}, {"cmd": "LAND", "latitude": 40.5993520, "longitude": -80.0092670}]
 
@@ -152,6 +158,9 @@ class DroneController(threading.Thread):
 		self._logger.debug("Current Mode: {0}, Setting Mode: {1} {2}".format(self._vehicle.mode, mode, MAV_MODE[mode]))
 		arg_list = [MAV_MODE[mode], 0, 0, 0, 0, 0, 0]
 		self._send_command(MAV_CMD['MODE'], *arg_list)
+
+		time.sleep(DEFAULT_INTERMISSION)
+
 		self._logger.debug("Mode after set: {0}".format(self._vehicle.mode))
 
 	def _arm(self, **unknown_options):
@@ -160,7 +169,7 @@ class DroneController(threading.Thread):
 
 		while self._is_running() and not self._vehicle.armed:
 			self._logger.info("Waiting for arming to succeed")
-			time.sleep(1)
+			time.sleep(DEFAULT_INTERMISSION)
 			self._vehicle.armed = True
 
 		self._logger.debug("Vehicle armed")
@@ -171,13 +180,18 @@ class DroneController(threading.Thread):
 
 		while self._is_running() and self._vehicle.armed:
 			self._logger.info("Waiting for disarming to succeed")
-			time.sleep(1)
+			time.sleep(DEFAULT_INTERMISSION)
 			self._vehicle.armed = False
 
 		self._logger.debug("Vehicle disarmed, Clearing mission")
 		cmds = self._vehicle.commands
 		cmds.clear()
 		cmds.upload()
+
+	def _takeoff_sender(self, latitude, longitude, altitude):
+		self._logger.info("Taking off to {0} meters above {1},{2}".format(altitude, latitude, longitude))
+		arg_list = [0, 0, 0, 0, latitude, longitude, altitude]
+		self._send_command(MAV_CMD['TAKEOFF'], *arg_list)
 
 	def _takeoff(self, target_altitude=2.5, latitude=None, longitude=None, **unknown_options):
 		altitude = 0.0
@@ -189,9 +203,9 @@ class DroneController(threading.Thread):
 			altitude = current_pos.alt
 
 		if latitude is not None and longitude is not None:
-			self._logger.info("Taking off to {0} meters above {1},{2}".format(altitude, latitude, longitude))
-			arg_list = [0, 0, 0, 0, latitude, longitude, altitude + target_altitude]
-			self._send_command(MAV_CMD['TAKEOFF'], *arg_list)
+			self._takeoff_sender(latitude, longitude, altitude+target_altitude)
+	
+			time.sleep(DEFAULT_INTERMISSION)
 		else:
 			self._logger.error("Ignoring TAKEOFF command - No takeoff location specified and no GPS data available.")
 
@@ -213,183 +227,108 @@ class DroneController(threading.Thread):
 		arg_list = [hold_time, radius, 0, 0, latitude, longitude, altitude]
 		self._send_command(MAV_CMD['WAYPOINT'], *arg_list)
 
+	def _mission_sender(self, cmd_list):
+		cmds = self._vehicle.commands
+		cmds.clear()
+
+		last_command_location = None
+
+		for element in cmd_list:
+			self._logger.info("Parsing mission element {0}".format(element))
+			if 'cmd' not in element:
+				self._logger.error("Rejecting Mission - Malformed mission element (cmd not found): {0}".format(element))
+				cmds.clear()
+				break
+			
+			elif element['cmd'] == 'WAYPOINT':
+				self._logger.debug("Parsing WAYPOINT mission element")
+				lat = None
+				lon = None
+				alt = None
+
+				if 'latitude' in element:
+					lat = element['latitude']
+
+				if 'longitude' in element:
+					lon = element['longitude']
+
+				if 'altitude' in element:
+					alt = element['altitude']
+				elif last_command_location is not None:
+					alt = last_command_location[2]
+
+
+				if lat is None or lon is None or alt is None:
+					self._logger.error("Rejecting Mission - Malformed mission element WAYPOINT (missing lat, long, or alt): {0}".format(element))
+					cmds.clear()
+					break
+
+				last_command_location = (lat, lon, alt)
+				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['WAYPOINT'], 0, 1, 
+												DEFAULT_HOLD_TIME, DEFAULT_RADIUS, 0, 0, lat, lon, alt)
+				cmds.add(cmd)
+
+			elif element['cmd'] == 'TAKEOFF':
+				self._logger.debug("Parsing TAKEOFF mission element")
+				target_alt = DEFAULT_TAKEOFF_ALT
+
+				if target_alt in element:
+					target_alt = element['target_altitude']
+
+				current_pos = self._vehicle.location.global_relative_frame
+				last_command_location = (current_pos.lat, current_pos.lon, current_pos.alt + target_alt)
+				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['TAKEOFF'], 0, 1, 
+												0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt + target_alt)
+				cmds.add(cmd)
+
+			elif element['cmd'] == 'LAND':
+				self._logger.debug("Parsing LAND mission element")
+				lat = None
+				lon = None
+
+				if 'latitude' in element:
+					lat = element['latitude']
+				elif last_command_location is not None:
+					lat = last_command_location[0]
+
+				if 'longitude' in element:
+					lon = element['longitude']
+				elif last_command_location is not None:
+					lon = last_command_location[1]
+				
+				if lat is None or lon is None:
+					current_pos = self._vehicle.location.global_relative_frame
+					lat = current_pos.lat
+					lon = current_pos.lon
+
+				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['LAND'], 0, 1, 
+												0, 0, 0, 0, lat, lon, 0.0)
+				cmds.add(cmd)
+		
+		self._logger.info("Mission parsed, sending mission to flight controller")
+
+		upload_successful = cmds.upload()
+		return upload_successful
+
 	def _mission(self, cmd_list, **unknown_options):
-		cmds = self._vehicle.commands
+		mission_sent = False
+		send_count = 0
 
-		cmds.clear()
+		while not mission_sent and send_count < DEFAULT_MISSION_RESEND_LIMIT:
+			mission_sent = self._mission_sender(cmd_list)
+			send_count += 1
 
-		last_command_location = None
+			if not mission_sent:
+				self._logger.warning("Unable to upload mission, retrying {0}".format(send_count))
+			else:
+				self._logger.info("Mission sent to flight controller successfully")
 
-		for element in cmd_list:
-			self._logger.info("Parsing mission element {0}".format(element))
-			if 'cmd' not in element:
-				self._logger.error("Rejecting Mission - Malformed mission element (cmd not found): {0}".format(element))
-				cmds.clear()
-				break
-			
-			elif element['cmd'] == 'WAYPOINT':
-				self._logger.debug("Parsing WAYPOINT mission element")
-				lat = None
-				lon = None
-				alt = None
+			time.sleep(DEFAULT_INTERMISSION)
 
-				if 'latitude' in element:
-					lat = element['latitude']
+		if not mission_sent:
+			self._logger.error("An error occurred during multiple attempts to upload mission, rejecting mission")
 
-				if 'longitude' in element:
-					lon = element['longitude']
-
-				if 'altitude' in element:
-					alt = element['altitude']
-				elif last_command_location is not None:
-					alt = last_command_location[2]
-
-
-				if lat is None or lon is None or alt is None:
-					self._logger.error("Rejecting Mission - Malformed mission element WAYPOINT (missing lat, long, or alt): {0}".format(element))
-					cmds.clear()
-					break
-
-				last_command_location = (lat, lon, alt)
-				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['WAYPOINT'], 0, 1, 
-												DEFAULT_HOLD_TIME, DEFAULT_RADIUS, 0, 0, lat, lon, alt)
-				cmds.add(cmd)
-
-			elif element['cmd'] == 'TAKEOFF':
-				self._logger.debug("Parsing TAKEOFF mission element")
-				target_alt = DEFAULT_TAKEOFF_ALT
-
-				if target_alt in element:
-					target_alt = element['target_altitude']
-
-				current_pos = self._vehicle.location.global_relative_frame
-				last_command_location = (current_pos.lat, current_pos.lon, current_pos.alt + target_alt)
-				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['TAKEOFF'], 0, 1, 
-												0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt + target_alt)
-				cmds.add(cmd)
-
-			elif element['cmd'] == 'LAND':
-				self._logger.debug("Parsing LAND mission element")
-				lat = None
-				lon = None
-
-				if 'latitude' in element:
-					lat = element['latitude']
-				elif last_command_location is not None:
-					lat = last_command_location[0]
-
-				if 'longitude' in element:
-					lon = element['longitude']
-				elif last_command_location is not None:
-					lon = last_command_location[1]
-				
-				if lat is None or lon is None:
-					current_pos = self._vehicle.location.global_relative_frame
-					lat = current_pos.lat
-					lon = current_pos.lon
-
-				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['LAND'], 0, 1, 
-												0, 0, 0, 0, lat, lon, 0.0)
-				cmds.add(cmd)
-		
-		self._logger.info("Mission parsed, sending mission to flight controller")
-
-		upload_successful = cmds.upload()
-
-		if not upload_successful:
-			self._logger.error("An error ocurred while uploading mission (cmds.upload returned false)")
-			self._mission_retry(cmd_list)
-		else:
-			self._logger.info("Mission sent to flight controller successfully")
-
-	def _mission_retry(self, cmd_list, **unknown_options):
-		self._logger.info("Retrying sendind mission")
-		cmds = self._vehicle.commands
-
-		cmds.clear()
-
-		last_command_location = None
-
-		for element in cmd_list:
-			self._logger.info("Parsing mission element {0}".format(element))
-			if 'cmd' not in element:
-				self._logger.error("Rejecting Mission - Malformed mission element (cmd not found): {0}".format(element))
-				cmds.clear()
-				break
-			
-			elif element['cmd'] == 'WAYPOINT':
-				self._logger.debug("Parsing WAYPOINT mission element")
-				lat = None
-				lon = None
-				alt = None
-
-				if 'latitude' in element:
-					lat = element['latitude']
-
-				if 'longitude' in element:
-					lon = element['longitude']
-
-				if 'altitude' in element:
-					alt = element['altitude']
-				elif last_command_location is not None:
-					alt = last_command_location[2]
-
-
-				if lat is None or lon is None or alt is None:
-					self._logger.error("Rejecting Mission - Malformed mission element WAYPOINT (missing lat, long, or alt): {0}".format(element))
-					cmds.clear()
-					break
-
-				last_command_location = (lat, lon, alt)
-				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['WAYPOINT'], 0, 1, 
-												DEFAULT_HOLD_TIME, DEFAULT_RADIUS, 0, 0, lat, lon, alt)
-				cmds.add(cmd)
-
-			elif element['cmd'] == 'TAKEOFF':
-				self._logger.debug("Parsing TAKEOFF mission element")
-				target_alt = DEFAULT_TAKEOFF_ALT
-
-				if target_alt in element:
-					target_alt = element['target_altitude']
-
-				current_pos = self._vehicle.location.global_relative_frame
-				last_command_location = (current_pos.lat, current_pos.lon, current_pos.alt + target_alt)
-				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['TAKEOFF'], 0, 1, 
-												0, 0, 0, 0, current_pos.lat, current_pos.lon, current_pos.alt + target_alt)
-				cmds.add(cmd)
-
-			elif element['cmd'] == 'LAND':
-				self._logger.debug("Parsing LAND mission element")
-				lat = None
-				lon = None
-
-				if 'latitude' in element:
-					lat = element['latitude']
-				elif last_command_location is not None:
-					lat = last_command_location[0]
-
-				if 'longitude' in element:
-					lon = element['longitude']
-				elif last_command_location is not None:
-					lon = last_command_location[1]
-				
-				if lat is None or lon is None:
-					current_pos = self._vehicle.location.global_relative_frame
-					lat = current_pos.lat
-					lon = current_pos.lon
-
-				cmd = dronekit.Command(0,0,0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, MAV_CMD['LAND'], 0, 1, 
-												0, 0, 0, 0, lat, lon, 0.0)
-				cmds.add(cmd)
-		
-		self._logger.info("Mission parsed, sending mission to flight controller")
-
-		upload_successful = cmds.upload()
-
-		if not upload_successful:
-			self._logger.error("An error ocurred while uploading mission (cmds.upload returned false)")
-		else:
-			self._logger.info("Mission sent to flight controller successfully")
+		return mission_sent
 
 	def _send_command(self, cmd, arg1, arg2, arg3, arg4, arg5, arg6, arg7):
 		self._vehicle._master.mav.command_long_send(self._target_system, self._target_component, cmd, 0,
