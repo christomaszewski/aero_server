@@ -40,6 +40,7 @@ class CommandParser(threading.Thread):
 						self._logger.info("Got Command {0}. Pushed to command queue".format(message))
 
 					elif message.type == 'CTRL':
+						self._logger.info("Got CTRL Command {0}. Processing.".format(message))
 						if payload['cmd'] == 'SAFETY_STOP':
 							self._control_thread.safety_behavior()
 						if payload['cmd'] == 'INTERRUPT':
