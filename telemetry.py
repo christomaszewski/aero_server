@@ -87,6 +87,6 @@ class TelemetrySender(object):
 			msg_count[msg_type] += 1
 
 #init_message_dispatch()
-t = TelemetrySender('192.168.1.63')
+t = TelemetrySender('192.168.1.56')
 #t = TelemetrySender('224.0.0.150')
 t.init_message_dispatch()

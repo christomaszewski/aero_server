@@ -9,8 +9,12 @@ import sys
 # Default system params
 DEFAULT_INTERMISSION = 0.1
 DEFAULT_MISSION_RESEND_LIMIT = 5
-DEFAULT_TAKEOFF_RESENT_LIMIT = 5
+DEFAULT_TAKEOFF_RESEND_LIMIT = 5
+DEFAULT_LAND_RESEND_LIMIT = 5
 DEFAULT_TAKEOFF_TIMEOUT = 2.0
+DEFAULT_LAND_TIMEOUT = 3.0
+DEFAULT_MIN_LAND_DELTA = 2.0
+DEFAULT_MIN_TAKEOFF_HEIGHT = 1.0
 
 # Default waypoint params
 DEFAULT_RADIUS = 3.0
@@ -149,6 +153,8 @@ class DroneController(threading.Thread):
 		except:
 			self._logger.error("{0} exception occurred while processing command {1}".format(sys.exc_info()[0], msg))
 
+		time.sleep(DEFAULT_INTERMISSION)
+
 
 	# Processes unrecognized commmands
 	def _error(self, cmd, **cmd_args):
@@ -173,6 +179,9 @@ class DroneController(threading.Thread):
 			self._vehicle.armed = True
 
 		self._logger.debug("Vehicle armed")
+		
+		time.sleep(DEFAULT_INTERMISSION)
+
 
 	def _disarm(self, **unknown_options):
 		self._logger.debug("Disarming vehicle")
@@ -188,12 +197,15 @@ class DroneController(threading.Thread):
 		cmds.clear()
 		cmds.upload()
 
+		time.sleep(DEFAULT_INTERMISSION)
+
 	def _takeoff_sender(self, latitude, longitude, altitude):
 		self._logger.info("Taking off to {0} meters above {1},{2}".format(altitude, latitude, longitude))
 		arg_list = [0, 0, 0, 0, latitude, longitude, altitude]
 		self._send_command(MAV_CMD['TAKEOFF'], *arg_list)
 
 	def _takeoff(self, target_altitude=2.5, latitude=None, longitude=None, **unknown_options):
+		takeoff_complete = False		
 		altitude = 0.0
 		# If not given a latitude and longitude, takeoff at current position
 		if latitude is None or longitude is None:
@@ -203,13 +215,33 @@ class DroneController(threading.Thread):
 			altitude = current_pos.alt
 
 		if latitude is not None and longitude is not None:
-			self._takeoff_sender(latitude, longitude, altitude+target_altitude)
-	
-			time.sleep(DEFAULT_INTERMISSION)
+			send_count = 0		
+
+			while not takeoff_complete and send_count < DEFAULT_TAKEOFF_RESEND_LIMIT:
+				self._takeoff_sender(latitude, longitude, altitude+target_altitude)
+				send_count += 1
+				time.sleep(DEFAULT_TAKEOFF_TIMEOUT)				
+				takeoff_complete = self._vehicle.location.global_relative_frame.alt >= DEFAULT_MIN_TAKEOFF_HEIGHT
+				if takeoff_complete:
+					self._logger.info("Takeoff successful")
+				elif send_count < DEFAULT_TAKEOFF_RESEND_LIMIT:
+					self._logger.warning("Failed to reach minimum takeoff altitude of {0} meters, retrying takeoff command {1}".format(DEFAULT_MIN_TAKEOFF_HEIGHT, send_count))
+				else:
+					self._logger.error("Failed to takeoff after {0} attempts".format(DEFAULT_TAKEOFF_RESEND_LIMIT))	
+
 		else:
 			self._logger.error("Ignoring TAKEOFF command - No takeoff location specified and no GPS data available.")
 
+		time.sleep(DEFAULT_INTERMISSION)
+		return takeoff_complete
+
+	def _land_sender(self, latitude, longitude, ground_level):
+		self._logger.info("Landing at {0},{1}".format(latitude,longitude))
+		arg_list = [0, 0, 0, 0, latitude, longitude, ground_level]
+		self._send_command(MAV_CMD['LAND'], *arg_list)		
+
 	def _land(self, latitude=None, longitude=None, ground_level=0.0, **unknown_options):
+		landing_complete = False	
 		if latitude is None or longitude is None:
 			# Use current location
 			current_pos = self._vehicle.location.global_relative_frame
@@ -217,15 +249,31 @@ class DroneController(threading.Thread):
 			longitude = current_pos.lon
 
 		if latitude is not None and longitude is not None:
-			self._logger.info("Landing at {0},{1}".format(latitude,longitude))
-			arg_list = [0, 0, 0, 0, latitude, longitude, ground_level]
-			self._send_command(MAV_CMD['LAND'], *arg_list)
+			last_altitude = self._vehicle.location.global_relative_frame.alt
+			send_count = 0
+
+			while not landing_complete and send_count < DEFAULT_LAND_RESEND_LIMIT:
+				self._land_sender(latitude, longitude, ground_level)
+				send_count += 1
+				time.sleep(DEFAULT_LAND_TIMEOUT)
+				landing_complete = last_altitude - self._vehicle.location.global_relative_frame.alt >= DEFAULT_MIN_LAND_DELTA
+				if landing_complete:
+					self._logger.info("Landing successfully initiated")
+				elif send_count < DEFAULT_LAND_RESEND_LIMIT:
+					self._logger.warning("Failed to initiate landing, retrying land command {0}".format(send_count))
+				else:
+					self._logger.error("Failed to initiate landing after {0} attempts".format(DEFAULT_LAND_RESEND_LIMIT))	
+			
 		else:
 			self._logger.error("Ignoring LAND command - No landing location specified and no GPS data available.")
+
+		time.sleep(DEFAULT_INTERMISSION)
+		return landing_complete
 
 	def _waypoint(self, latitude, longitude, altitude, radius=DEFAULT_RADIUS, hold_time=DEFAULT_HOLD_TIME, **unknown_options):
 		arg_list = [hold_time, radius, 0, 0, latitude, longitude, altitude]
 		self._send_command(MAV_CMD['WAYPOINT'], *arg_list)
+		time.sleep(DEFAULT_INTERMISSION)
 
 	def _mission_sender(self, cmd_list):
 		cmds = self._vehicle.commands
@@ -327,6 +375,8 @@ class DroneController(threading.Thread):
 
 		if not mission_sent:
 			self._logger.error("An error occurred during multiple attempts to upload mission, rejecting mission")
+
+		time.sleep(DEFAULT_INTERMISSION)
 
 		return mission_sent
 
