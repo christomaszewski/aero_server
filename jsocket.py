@@ -41,7 +41,7 @@ class JsonSocket(object):
 			data.extend(new_data)
 			if new_data == b'':
 				#print("Socket connection broken, handle appropriately")
-				raise RuntimeError("Socket connection broken")
+				raise socket.error("Socket connection broken")
 
 		return data
 
@@ -83,6 +83,7 @@ class JsonSocket(object):
 		return json.loads(msg, cls=decoder)
 
 	def close(self):
+		self._socket.shutdown(socket.SHUT_RDWR)
 		self._socket.close()
 
 	@property

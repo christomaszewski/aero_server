@@ -2,6 +2,10 @@ import threading
 import Queue
 import time
 from messages import Message
+import logging
+import sys
+import socket
+
 
 class CommandParser(threading.Thread):
 
@@ -10,6 +14,8 @@ class CommandParser(threading.Thread):
 		self._cmd_queue = cmd_queue
 		self._control_thread = control_thread
 		self._is_alive = False
+
+		self._logger = logging.getLogger('command_server_log')
 
 		super(CommandParser, self).__init__()
 
@@ -24,34 +30,43 @@ class CommandParser(threading.Thread):
 	def run(self):
 		with self._socket:
 			while self._is_alive:
-				message = self._socket.read_obj(decoder=Message.json_decoder)
-                                print(message)
-                                try:
-				        payload = message.payload
-                                except:
-                                        print("Caught exception getting message.payload")
-                                        continue
+				try:
+					message = self._socket.read_obj(decoder=Message.json_decoder)
+					payload = message.payload
 
-				#Todo maybe parse commands here?
-				if message.type == 'CMD':
-					self._cmd_queue.put(message)
-					print("Got Command {0}. Pushed to command queue".format(message))
+					#Todo maybe parse commands here?
+					if message.type == 'CMD':
+						self._cmd_queue.put(message)
+						self._logger.info("Got Command {0}. Pushed to command queue".format(message))
 
-				elif message.type == 'CTRL':
-					if payload['cmd'] == 'SAFETY_STOP':
-						self._control_thread.safety_behavior()
-					if payload['cmd'] == 'INTERRUPT':
-						self._control_thread.interrupt()
-					elif payload['cmd'] == 'RESUME':
-						self._control_thread.resume()
-					elif payload['cmd'] == 'HEARTBEAT':
-						self._control_thread.update_heartbeat(time.time())
-				elif message.type == 'CONFIG':
-					if payload['cmd'] == 'SET':
-						pass
-						
-				else:
-					print("Got unrecognized message {0}".format(message))
+					elif message.type == 'CTRL':
+						self._logger.info("Got CTRL Command {0}. Processing.".format(message))
+						if payload['cmd'] == 'SAFETY_STOP':
+							self._control_thread.safety_behavior()
+						if payload['cmd'] == 'INTERRUPT':
+							self._control_thread.interrupt()
+						elif payload['cmd'] == 'RESUME':
+							self._control_thread.resume()
+						elif payload['cmd'] == 'HEARTBEAT':
+							self._control_thread.update_heartbeat(time.time())
+					elif message.type == 'CONFIG':
+						if payload['cmd'] == 'SET':
+							pass
+							
+					else:
+						self._logger.warning("Got unrecognized message {0}".format(message))
+
+				except socket.error:
+					self._logger.warning("Socket was closed while attempting to read, closing socket and shutting down thread.")
+					self.stop()
+
+				except Exception as e:
+					name = sys.exc_info()[0]
+					trace = sys.exc_info()[2]
+					self._logger.error("A {0} exception occured while trying to parse message {1}".format(name, message))
+					self._logger.debug("Traceback: {0}".format(trace))
+				except:
+					self._logger.error("An unknown exception occured while trying to parse message {0}".format(message))
 
 class MessageDispatcher(threading.Thread):
 
@@ -59,6 +74,8 @@ class MessageDispatcher(threading.Thread):
 		self._socket = socket
 		self._msg_queue = msg_queue
 		self._is_alive = False
+
+		self._logger = logging.getLogger('command_server_log')
 
 		super(MessageDispatcher, self).__init__()
 
@@ -78,7 +95,7 @@ class MessageDispatcher(threading.Thread):
 					msg = self._msg_queue.get(timeout=3)
 				except Queue.Empty as e:
 					#handle empty command queue, add autonomy here
-					print("Message Queue is empty")
+					self._logger.info("Message Queue is empty")
 					msg = None
 
 				if msg is not None:

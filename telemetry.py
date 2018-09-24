@@ -20,7 +20,6 @@ class TelemetrySender(object):
 		self.server_ip = ipaddr
 
 
-
 	def init_message_dispatch(self):
 		message_queue = Queue.Queue()
 		msgd_t = threading.Thread(target=self.message_dispatch,args=(message_queue,))
@@ -57,12 +56,13 @@ class TelemetrySender(object):
 			tag = msg.partition(' ')[0]
 			payload = msg.split(' ', 1)[1]
 
-			json_payload =  yaml.load(payload) #converts to dict
-			json_payload['time'] = current_time() #add timestamp
-
-			net_msg = Message(tag,json_payload)
-
 			try:
+
+				json_payload =  yaml.load(payload) #converts to dict
+				json_payload['time'] = current_time() #add timestamp
+
+				net_msg = Message(tag,json_payload)
+
 				jsock.send_obj(net_msg, encoder=Message.json_encoder)
 			except:
 				#print('connection down')
@@ -72,12 +72,11 @@ class TelemetrySender(object):
 		mav = mavutil.mavlink_connection('tcp:127.0.0.1:5760')
 		mav.wait_heartbeat()
 
+		types_of_interest = ['GLOBAL_POSITION_INT', 'ATTITUDE', 'BATTERY_STATUS']
 
-		types_of_interest = ['GLOBAL_POSITION_INT', 'MISSION_CURRENT', 'PARAM_VALUE', 'ATTITUDE', 'BATTERY_STATUS', 'COMMAND_LONG', 
-									'EXTENDED_SYS_STATE', 'HOME_POSITION', 'MISSION_ITEM_REACHED', 'STATUSTEXT', 'SYS_STATUS']
 
 		msg_count = {t:0 for t in types_of_interest}
-		msg_send_rate = defaultdict(itertools.repeat(1).next, {'GLOBAL_POSITION_INT':20, 'ATTITUDE':20})
+		msg_send_rate = defaultdict(itertools.repeat(1).next, {'GLOBAL_POSITION_INT':20, 'ATTITUDE':20, 'BATTERY_STATUS':20})
 
 
 		while True:
