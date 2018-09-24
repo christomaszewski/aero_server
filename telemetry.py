@@ -56,12 +56,13 @@ class TelemetrySender(object):
 			tag = msg.partition(' ')[0]
 			payload = msg.split(' ', 1)[1]
 
-			json_payload =  yaml.load(payload) #converts to dict
-			json_payload['time'] = current_time() #add timestamp
-
-			net_msg = Message(tag,json_payload)
-
 			try:
+
+				json_payload =  yaml.load(payload) #converts to dict
+				json_payload['time'] = current_time() #add timestamp
+
+				net_msg = Message(tag,json_payload)
+
 				jsock.send_obj(net_msg, encoder=Message.json_encoder)
 			except:
 				#print('connection down')
