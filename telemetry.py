@@ -74,8 +74,10 @@ class TelemetrySender(object):
 
 		types_of_interest = ['GLOBAL_POSITION_INT', 'ATTITUDE', 'BATTERY_STATUS']
 
+
 		msg_count = {t:0 for t in types_of_interest}
 		msg_send_rate = defaultdict(itertools.repeat(1).next, {'GLOBAL_POSITION_INT':20, 'ATTITUDE':20, 'BATTERY_STATUS':20})
+
 
 		while True:
 			msg = mav.recv_match(type=types_of_interest, blocking=True)
