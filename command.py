@@ -51,6 +51,7 @@ class CommandParser(threading.Thread):
 						elif payload['cmd'] == 'HEARTBEAT':
 							self._control_thread.update_heartbeat(time.time())
 					elif message.type == 'CONFIG':
+						self._logger.info("Got CONFIG Command {0}. Processing.".format(message))
 						if payload['cmd'] == 'SET' and 'param' in payload and 'value' in payload:
 							self._server_config[payload['param']] = payload['value']
 							
@@ -58,7 +59,9 @@ class CommandParser(threading.Thread):
 							response_msg = Message('INFO', param_dict)
 							self._socket.send_obj(response_msg, Message.json_encoder)
 						elif payload['cmd'] == 'GET' and 'param' in payload:
+							print("processing get request")
 							param_dict = {payload['param']:self._server_config[payload['param']]}
+							print(self._server_config.settings['failsafe_mission'])
 							response_msg = Message('INFO', param_dict)
 							self._socket.send_obj(response_msg, Message.json_encoder)
 							

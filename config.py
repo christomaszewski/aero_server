@@ -16,7 +16,10 @@ class ConfigDecoder(json.JSONDecoder):
 		super(ConfigDecoder, self).__init__(object_hook=self.object_hook, *args, **kwargs)
 
 	def object_hook(self, obj):
-		return Config(obj)
+		if 'cmd' in obj:
+			return obj
+		else:
+			return Config(obj)
 
 
 class Config(object):
