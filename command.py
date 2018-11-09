@@ -54,11 +54,11 @@ class CommandParser(threading.Thread):
 						if payload['cmd'] == 'SET' and 'param' in payload and 'value' in payload:
 							self._server_config[payload['param']] = payload['value']
 							
-							param_dict = {payload['param']:self._server_config['param']}
+							param_dict = {payload['param']:self._server_config[payload['param']]}
 							response_msg = Message('INFO', param_dict)
 							self._socket.send_obj(response_msg, Message.json_encoder)
 						elif payload['cmd'] == 'GET' and 'param' in payload:
-							param_dict = {payload['param']:self._server_config['param']}
+							param_dict = {payload['param']:self._server_config[payload['param']]}
 							response_msg = Message('INFO', param_dict)
 							self._socket.send_obj(response_msg, Message.json_encoder)
 							
