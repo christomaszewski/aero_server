@@ -27,11 +27,12 @@ DEFAULT_TAKEOFF_ALT = 2.5
 DEFAULT_HEARTBEAT_TIMEOUT = 20.0
 DEFAULT_FAILSAFE_MISSION = [{"latitude": 40.5993520, "altitude": 5.0, "cmd": "WAYPOINT", "longitude": -80.0092670}, {"cmd": "LAND", "latitude": 40.5993520, "longitude": -80.0092670}]
 
+"""
 FAILSAFE_CONF = '/home/aero/src/aero_server/failsafe.conf'
 with open(FAILSAFE_CONF,'r') as fh:
         conf = json.load(fh)
 DEFAULT_FAILSAFE_MISSION = conf['failsafe_mission']
-
+"""
 MAV_CMD = {'TAKEOFF':mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 
 				'WAYPOINT':mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
 				'LAND':mavutil.mavlink.MAV_CMD_NAV_LAND,
@@ -42,9 +43,10 @@ MAV_MODE = {'GUIDED':8, 'AUTO':4}
 
 class DroneController(threading.Thread):
 
-	def  __init__(self, cmd_queue, response_queue):
+	def  __init__(self, cmd_queue, response_queue, server_config):
 		self._cmd_queue  = cmd_queue
 		self._response_queue = response_queue
+		self._server_config = server_config
 		self._current_command = None
 		self._is_alive = False
 		self._is_interrupted = False
@@ -312,6 +314,8 @@ class DroneController(threading.Thread):
 					alt = element['altitude']
 				elif last_command_location is not None:
 					alt = last_command_location[2]
+				else:
+					alt = self._vehicle.location.global_relative_frame.alt
 
 
 				if lat is None or lon is None or alt is None:

@@ -3,6 +3,7 @@ import Queue
 from control import DroneController
 from command import CommandParser, MessageDispatcher
 from messages import Message
+from config import Config
 import json
 import sys
 import signal
@@ -21,12 +22,18 @@ handler.setFormatter(formatter)
 
 logger.addHandler(handler)
 
+# Attempt to load server config file
+server_config_filename = '/home/aero/src/aero_server/server.conf'
+server_config = None
+with open(server_config_filename, 'r') as f:
+	server_config = json.load(f, cls=Config.json_decoder)
+
 # Create command and response queues
 cmd_queue = Queue.Queue()
 response_queue = Queue.Queue()
 
 # Spawn control thread and pass queue reference
-control_thread = DroneController(cmd_queue, response_queue)
+control_thread = DroneController(cmd_queue, response_queue, server_config)
 control_thread.start()
 
 # Setup json server to receive commands and push them to cmd queue
@@ -60,12 +67,12 @@ while True:
 
 	# Add log message with ip from connected client
 
-	cmd_thread = CommandParser(jsock, cmd_queue, control_thread)
+	cmd_thread = CommandParser(jsock, cmd_queue, control_thread, server_config)
 	cmd_thread.start()
 
-	#response_thread = MessageDispatcher(jsock, response_queue)
-	#response_thread.start()
+	response_thread = MessageDispatcher(jsock, response_queue)
+	response_thread.start()
 
 	thread_pool.append(cmd_thread)
-	#thread_pool.append(response_thread)
+	thread_pool.append(response_thread)
 	thread_pool = [t for t in thread_pool if t.is_alive()]

@@ -34,7 +34,6 @@ class TelemetrySender(object):
 		ready = False
 		while not ready:
 			print('attempting to connect to ', self.server_ip)
-			#jsock = JsonClient(use_udp=True)
 			jsock = MulticastJsonClient()
 			try:
 				jsock.connect(self.server_ip, 10012)
@@ -97,6 +96,5 @@ class TelemetrySender(object):
 			msg_count[msg_type] += 1
 
 #init_message_dispatch()
-#t = TelemetrySender('192.168.1.56')
 t = TelemetrySender('224.0.0.150')
 t.init_message_dispatch()

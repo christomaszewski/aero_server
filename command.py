@@ -9,10 +9,11 @@ import socket
 
 class CommandParser(threading.Thread):
 
-	def __init__(self, socket, cmd_queue, control_thread):
+	def __init__(self, socket, cmd_queue, control_thread, server_config):
 		self._socket = socket
 		self._cmd_queue = cmd_queue
 		self._control_thread = control_thread
+		self._server_config = server_config
 		self._is_alive = False
 
 		self._logger = logging.getLogger('command_server_log')
@@ -50,8 +51,16 @@ class CommandParser(threading.Thread):
 						elif payload['cmd'] == 'HEARTBEAT':
 							self._control_thread.update_heartbeat(time.time())
 					elif message.type == 'CONFIG':
-						if payload['cmd'] == 'SET':
-							pass
+						if payload['cmd'] == 'SET' and 'param' in payload and 'value' in payload:
+							self._server_config[payload['param']] = payload['value']
+							
+							param_dict = {payload['param']:self._server_config['param']}
+							response_msg = Message('INFO', param_dict)
+							self._socket.send_obj(response_msg, Message.json_encoder)
+						elif payload['cmd'] == 'GET' and 'param' in payload:
+							param_dict = {payload['param']:self._server_config['param']}
+							response_msg = Message('INFO', param_dict)
+							self._socket.send_obj(response_msg, Message.json_encoder)
 							
 					else:
 						self._logger.warning("Got unrecognized message {0}".format(message))
