@@ -5,6 +5,8 @@ import Queue
 import time
 import logging
 import sys
+import os
+import json
 
 # Default system params
 DEFAULT_INTERMISSION = 0.1
@@ -22,8 +24,13 @@ DEFAULT_HOLD_TIME = 1.0
 DEFAULT_TAKEOFF_ALT = 2.5
 
 # Default failsafe params
-DEFAULT_HEARTBEAT_TIMEOUT = 10.0
+DEFAULT_HEARTBEAT_TIMEOUT = 20.0
 DEFAULT_FAILSAFE_MISSION = [{"latitude": 40.5993520, "altitude": 5.0, "cmd": "WAYPOINT", "longitude": -80.0092670}, {"cmd": "LAND", "latitude": 40.5993520, "longitude": -80.0092670}]
+
+FAILSAFE_CONF = '/home/aero/src/aero_server/failsafe.conf'
+with open(FAILSAFE_CONF,'r') as fh:
+        conf = json.load(fh)
+DEFAULT_FAILSAFE_MISSION = conf['failsafe_mission']
 
 MAV_CMD = {'TAKEOFF':mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 
 				'WAYPOINT':mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,

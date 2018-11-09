@@ -34,10 +34,10 @@ class TelemetrySender(object):
 		ready = False
 		while not ready:
 			print('attempting to connect to ', self.server_ip)
-			jsock = JsonClient(use_udp=True)
-			#jsock = MulticastJsonClient()
+			#jsock = JsonClient(use_udp=True)
+			jsock = MulticastJsonClient()
 			try:
-				jsock.connect(self.server_ip, 6781)
+				jsock.connect(self.server_ip, 10012)
 				ready = True
 			except:
 				print("Socket Refused")
@@ -72,13 +72,22 @@ class TelemetrySender(object):
 		mav = mavutil.mavlink_connection('tcp:127.0.0.1:5760')
 		mav.wait_heartbeat()
 
-		types_of_interest = ['GLOBAL_POSITION_INT', 'ATTITUDE', 'BATTERY_STATUS']
+                types_of_interest = [ 'GLOBAL_POSITION_INT',
+                                      'ATTITUDE',
+                                      'BATTERY_STATUS',
+                                      'STATUSEXT',
+                                      'MISSION_ITEM_REACHED',
+                                      'MISSION_CURRENT'
+                                      'EXTENDED_SYS_STATE' ]
 
-
-		msg_count = {t:0 for t in types_of_interest}
-		msg_send_rate = defaultdict(itertools.repeat(1).next, {'GLOBAL_POSITION_INT':20, 'ATTITUDE':20, 'BATTERY_STATUS':20})
-
-
+                msg_count = {t:0 for t in types_of_interest}
+                msg_send_rate = defaultdict(itertools.repeat(1).next, { 'GLOBAL_POSITION_INT' : 20,
+                                                                        'ATTITUDE'            : 20,
+                                                                        'BATTERY_STATUS'      : 20,
+                                                                        'STATUSEXT'           : 1,
+                                                                        'MISSION_ITEM_REACHED': 1,
+                                                                        'MISSION_CURRENT'     : 1,
+                                                                        'EXTENDED_SYS_STATE'  : 5  })
 		while True:
 			msg = mav.recv_match(type=types_of_interest, blocking=True)
 			msg_type = msg.get_type()
@@ -88,6 +97,6 @@ class TelemetrySender(object):
 			msg_count[msg_type] += 1
 
 #init_message_dispatch()
-t = TelemetrySender('192.168.1.56')
-#t = TelemetrySender('224.0.0.150')
+#t = TelemetrySender('192.168.1.56')
+t = TelemetrySender('224.0.0.150')
 t.init_message_dispatch()
