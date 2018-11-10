@@ -23,7 +23,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 # Setup logfile and add file handler to logger
-log_filename = "{0}.txt".format(time.strftime('%d_%m_%Y_%H_%M_%S'))
+log_filename = "/home/aero/src/aero_server/{0}.txt".format(time.strftime('%d_%m_%Y_%H_%M_%S'))
 file_handler = logging.FileHandler(log_filename)
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
