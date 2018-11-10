@@ -9,6 +9,10 @@ import sys
 import signal
 import time
 import logging
+import os
+
+# Define aero_server src dir
+src_dir = "/home/aero/src/aero_server"
 
 # Initialize and Setup Logger
 logger = logging.getLogger(name='command_server_log')
@@ -23,14 +27,18 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 # Setup logfile and add file handler to logger
-log_filename = "/home/aero/src/aero_server/{0}.txt".format(time.strftime('%d_%m_%Y_%H_%M_%S'))
+log_dir = "{0}/logs"
+if not os.path.exists(log_dir):
+	os.makedirs(log_dir)
+
+log_filename = "{0}/{1}.txt".format(log_dir, time.strftime('%d_%m_%Y_%H_%M_%S'))
 file_handler = logging.FileHandler(log_filename)
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 # Attempt to load server config file
-server_config_filename = '/home/aero/src/aero_server/server.conf'
+server_config_filename = "{0}/server.conf".format(src_dir)
 server_config = None
 with open(server_config_filename, 'r') as f:
 	server_config = json.load(f, cls=Config.json_decoder)

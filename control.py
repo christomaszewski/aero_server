@@ -200,7 +200,11 @@ class DroneController(threading.Thread):
 			return False
 
 		self._server_config.preflight_passed = True
-	
+
+		info_dict = {"preflight_passed":True}
+		msg = Message.from_info_dict(info_dict)
+		self._response_queue.put(msg)
+
 
 	# Processes unrecognized commmands
 	def _error(self, cmd, **cmd_args):

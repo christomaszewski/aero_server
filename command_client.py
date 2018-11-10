@@ -21,7 +21,15 @@ with open(mission_file, 'r') as mission:
 		jsock.send_obj(cmd_msg, encoder=Message.json_encoder)
 		#time.sleep(0.1)
 
+time.sleep(3.0)
+
 response = jsock.read_obj(decoder=Message.json_decoder)
 print(response)
+
+time.sleep(3.0)
+
+response = jsock.read_obj(decoder=Message.json_decoder)
+print(response)
+
 
 jsock.close()

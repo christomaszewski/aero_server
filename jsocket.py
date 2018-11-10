@@ -17,6 +17,8 @@ class JsonSocket(object):
 		# Must be 2 right now because struct.pack/unpack are hardcoded below
 		self._header_size = 2
 
+		self._marked_as_closed = False
+
 	def __enter__(self):
 		return self
 
@@ -85,6 +87,12 @@ class JsonSocket(object):
 	def close(self):
 		self._socket.shutdown(socket.SHUT_RDWR)
 		self._socket.close()
+		self._marked_as_closed = True
+
+	@property
+	def marked_as_closed(self):
+		return self._marked_as_closed
+	
 
 	@property
 	def socket(self):

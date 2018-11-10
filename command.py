@@ -27,6 +27,7 @@ class CommandParser(threading.Thread):
 
 	def stop(self):
 		self._is_alive = False
+		self._socket.close()
 
 	def run(self):
 		with self._socket:
@@ -102,7 +103,7 @@ class MessageDispatcher(threading.Thread):
 
 	def run(self):
 		with self._socket:
-			while self._is_alive:
+			while self._is_alive and not self._socket.marked_as_closed:
 				# Read message from response queue and write it out to the socket
 				try:
 					msg = self._msg_queue.get(timeout=3)
@@ -111,6 +112,11 @@ class MessageDispatcher(threading.Thread):
 					self._logger.info("Message Queue is empty")
 					msg = None
 
-				if msg is not None:
-					self._socket.send_obj(msg, encoder=Message.json_encoder)
+				try:
+					if msg is not None:
+						self._socket.send_obj(msg, encoder=Message.json_encoder)
+				except socket.error:
+						self._logger.warning("Socket was closed while attempting to write to it, pushing message back onto queue.")
+						self._msg_queue.put(msg)
+						self._stop()
 
