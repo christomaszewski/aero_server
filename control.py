@@ -168,11 +168,13 @@ class DroneController(threading.Thread):
 		try:
 			cmd_func(**payload)
 		except:
-			self._logger.error("{0} exception occurred while processing command {1}".format(sys.exc_info()[0], msg))
+			self._error("{0} exception occurred while processing command {1}".format(sys.exc_info()[0], msg))
 
 		time.sleep(DEFAULT_INTERMISSION)
 
 	def _preflight(self, **unknown_options):
+		self._server_config.preflight_passed = False
+
 		if not self._server_config.failsafe_confirmed:
 			self._error("Preflight failed due to unconfirmed failsafe mission")
 			return False
@@ -184,7 +186,7 @@ class DroneController(threading.Thread):
 		self._logger.debug("Arming vehicle")
 		self._vehicle.armed = True
 
-		time.sleep(1.0)
+		time.sleep(1.5)
 
 		if not self._vehicle.armed:
 			self._error("Preflight failed due to failed arming")
@@ -193,7 +195,7 @@ class DroneController(threading.Thread):
 		self._logger.debug("Disarming vehicle")
 		self._vehicle.armed = False
 
-		time.sleep(1.0)
+		time.sleep(1.5)
 
 		if self._vehicle.armed:
 			self._error("Preflight failed due to failed disarming")
@@ -204,6 +206,8 @@ class DroneController(threading.Thread):
 		info_dict = {"preflight_passed":True}
 		msg = Message.from_info_dict(info_dict)
 		self._response_queue.put(msg)
+
+		return True
 
 
 	# Processes unrecognized commmands
@@ -226,12 +230,13 @@ class DroneController(threading.Thread):
 	
 		self._logger.debug("Arming vehicle")
 		self._vehicle.armed = True
+		time.sleep(self._server_config.arm_timeout)
 
 		send_count = 1
 
 		while self._is_running() and not self._vehicle.armed and send_count < self._server_config.arm_resend_limit:
 			self._logger.info("Waiting for arming to succeed")
-			time.sleep(DEFAULT_INTERMISSION)
+			time.sleep(self._server_config.arm_timeout)
 			self._vehicle.armed = True
 			send_count += 1
 
@@ -247,12 +252,13 @@ class DroneController(threading.Thread):
 	def _disarm(self, **unknown_options):
 		self._logger.debug("Disarming vehicle")
 		self._vehicle.armed = False
+		time.sleep(self._server_config.arm_timeout)
 
 		send_count = 1
 
 		while self._is_running() and self._vehicle.armed and send_count < self._server_config.arm_resend_limit:
 			self._logger.info("Waiting for disarming to succeed")
-			time.sleep(DEFAULT_INTERMISSION)
+			time.sleep(self._server_config.arm_timeout)
 			self._vehicle.armed = False
 			send_count += 1
 

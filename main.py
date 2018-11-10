@@ -31,7 +31,7 @@ log_dir = "{0}/logs".format(src_dir)
 if not os.path.exists(log_dir):
 	os.makedirs(log_dir)
 
-log_filename = "{0}/{1}.txt".format(log_dir, time.strftime('%d_%m_%Y_%H_%M_%S'))
+log_filename = "{0}/command_log_{1}.txt".format(log_dir, time.strftime('%d_%m_%Y_%H_%M_%S'))
 file_handler = logging.FileHandler(log_filename)
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)

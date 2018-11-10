@@ -41,6 +41,7 @@ class Config(object):
 								"mission_resend_limit":5,
 								"takeoff_resend_limit":5,
 								"land_resend_limit":5,
+								"arm_timeout":0.5,
 								"takeoff_timeout":2.0,
 								"land_timeout":3.0,
 								"min_land_delta":2.0,
@@ -103,12 +104,20 @@ class Config(object):
 		return self._settings['arm_resend_limit']
 
 	@property
+	def arm_timeout(self):
+		return self._settings['arm_timeout']
+
+	@property
 	def land_resend_limit(self):
 		return self._settings['land_resend_limit']
 
 	@property
 	def land_timeout(self):
 		return self._settings['land_timeout']	
+	
+	@property
+	def min_land_delta(self):
+		return self._settings['min_land_delta']
 
 	@property
 	def mission_resend_limit(self):

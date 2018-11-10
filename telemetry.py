@@ -12,6 +12,27 @@ import ast
 import sys
 import time
 
+# Define aero_server src dir
+src_dir = "/home/aero/src/aero_server"
+
+# Initialize and Setup Logger
+logger = logging.getLogger(name='telemetry_server_log')
+logger.setLevel(logging.DEBUG)
+
+# Setup logfile and add file handler to logger
+log_dir = "{0}/logs".format(src_dir)
+if not os.path.exists(log_dir):
+	os.makedirs(log_dir)
+
+log_filename = "{0}/telemetry_log_{1}.txt".format(log_dir, time.strftime('%d_%m_%Y_%H_%M_%S'))
+file_handler = logging.FileHandler(log_filename)
+file_handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+
 class TelemetrySender(object):
 
 	server_ip = None
@@ -36,7 +57,7 @@ class TelemetrySender(object):
 			print('attempting to connect to ', self.server_ip)
 			jsock = MulticastJsonClient()
 			try:
-				jsock.connect(self.server_ip, 10012)
+				jsock.connect(self.server_ip, 10010)
 				ready = True
 			except:
 				self._logger.warn("Socket Refused")
@@ -111,26 +132,7 @@ class TelemetrySender(object):
 			msg_count[msg_type] += 1
 			"""
 
-# Define aero_server src dir
-src_dir = "/home/aero/src/aero_server"
 
-# Initialize and Setup Logger
-logger = logging.getLogger(name='telemetry_server_log')
-logger.setLevel(logging.DEBUG)
-
-# Setup logfile and add file handler to logger
-log_dir = "{0}/logs".format(src_dir)
-if not os.path.exists(log_dir):
-	os.makedirs(log_dir)
-
-log_filename = "{0}/telemetry_log_{1}.txt".format(log_dir, time.strftime('%d_%m_%Y_%H_%M_%S'))
-file_handler = logging.FileHandler(log_filename)
-file_handler.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
 
 
 #init_message_dispatch()
