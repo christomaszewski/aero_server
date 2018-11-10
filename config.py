@@ -45,7 +45,8 @@ class Config(object):
 								"land_timeout":3.0,
 								"min_land_delta":2.0,
 								"min_takeoff_height":1.0,
-								"preflight_passed":False}
+								"preflight_passed":False,
+								"preflight_timeout":300}
 
 
 	def __init__(self, settings_dict):

@@ -169,7 +169,14 @@ class DroneController(threading.Thread):
 
 	def _preflight(self, **unknown_options):
 		if not self._server_config.failsafe_confirmed:
-			error_msg = "Preflight failed due to unconfirmed failsafe missions"
+			error_msg = "Preflight failed due to unconfirmed failsafe mission"
+			self._logger.error(error_msg)
+			msg = Message.from_error(error_msg)
+			self._response_queue.put(msg)
+			return False
+
+		if self._vehicle.gps_0.fix_type <= 1:
+			error_msg = "Preflight failed due to lack of GPS fix"
 			self._logger.error(error_msg)
 			msg = Message.from_error(error_msg)
 			self._response_queue.put(msg)
