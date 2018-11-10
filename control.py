@@ -149,6 +149,11 @@ class DroneController(threading.Thread):
 		self._vehicle.close()
 		self._logger.info("DroneController thread stopped")
 
+	def _error(self, error_msg):
+		self._logger.error(error_msg)
+		msg = Message.from_error(error_msg)
+		self._response_queue.put(msg)
+
 	def _process_command(self, msg):
 		if msg.type != 'CMD':
 			self._logger.error("Tried to process a message that was not a command")
@@ -158,7 +163,7 @@ class DroneController(threading.Thread):
 		cmd = payload['cmd']
 
 		cmd_func_name = "_{0}".format(cmd.lower())
-		cmd_func = getattr(self, cmd_func_name, lambda **kwargs: self._error(cmd, **kwargs))
+		cmd_func = getattr(self, cmd_func_name, lambda **kwargs: self._unknown(cmd, **kwargs))
 
 		try:
 			cmd_func(**payload)
@@ -169,17 +174,11 @@ class DroneController(threading.Thread):
 
 	def _preflight(self, **unknown_options):
 		if not self._server_config.failsafe_confirmed:
-			error_msg = "Preflight failed due to unconfirmed failsafe mission"
-			self._logger.error(error_msg)
-			msg = Message.from_error(error_msg)
-			self._response_queue.put(msg)
+			self._error("Preflight failed due to unconfirmed failsafe mission")
 			return False
 
 		if self._vehicle.gps_0.fix_type <= 1:
-			error_msg = "Preflight failed due to lack of GPS fix"
-			self._logger.error(error_msg)
-			msg = Message.from_error(error_msg)
-			self._response_queue.put(msg)
+			self._error("Preflight failed due to lack of GPS fix")
 			return False
 
 		self._logger.debug("Arming vehicle")
@@ -188,10 +187,7 @@ class DroneController(threading.Thread):
 		time.sleep(1.0)
 
 		if not self._vehicle.armed:
-			error_msg = "Preflight failed due to failed arming"
-			self._logger.error(error_msg)
-			msg = Message.from_error(error_msg)
-			self._response_queue.put(msg)
+			self._error("Preflight failed due to failed arming")
 			return False
 
 		self._logger.debug("Disarming vehicle")
@@ -200,10 +196,7 @@ class DroneController(threading.Thread):
 		time.sleep(1.0)
 
 		if self._vehicle.armed:
-			error_msg = "Preflight failed due to failed disarming"
-			self._logger.error(error_msg)
-			msg = Message.from_error(error_msg)
-			self._response_queue.put(msg)
+			self._error("Preflight failed due to failed disarming")
 			return False
 
 		self._server_config.preflight_passed = True
@@ -214,8 +207,8 @@ class DroneController(threading.Thread):
 
 
 	# Processes unrecognized commmands
-	def _error(self, cmd, **cmd_args):
-		self._logger.error("Unknown command {0} with args {1}".format(cmd, cmd_args))
+	def _unknown(self, cmd, **cmd_args):
+		self._error("Unknown command {0} with args {1}".format(cmd, cmd_args))
 	
 	def _mode(self, mode, **unknown_options):
 		self._logger.debug("Current Mode: {0}, Setting Mode: {1} {2}".format(self._vehicle.mode, mode, MAV_MODE[mode]))
@@ -228,10 +221,7 @@ class DroneController(threading.Thread):
 
 	def _arm(self, **unknown_options):
 		if not self._server_config.preflight_passed:
-			error_msg = "Arming denied, preflight not complete"
-			self._logger.error(error_msg)
-			msg = Message.from_error(error_msg)
-			self._response_queue.put(msg)
+			self._error("Arming denied, preflight not complete")
 			return False
 	
 		self._logger.debug("Arming vehicle")
@@ -251,10 +241,7 @@ class DroneController(threading.Thread):
 			self._logger.debug("Vehicle armed")
 			return True
 		else:
-			error_msg = "Failed to arm vehicle after {0} attempts".format(send_count)
-			self._logger.error(error_msg)
-			msg = Message.from_error(error_msg)
-			self._response_queue.put(msg)
+			self._error("Failed to arm vehicle after {0} attempts".format(send_count))
 			return False
 		
 	def _disarm(self, **unknown_options):
@@ -278,10 +265,7 @@ class DroneController(threading.Thread):
 			cmds.upload()
 			return True
 		else:
-			error_msg = "Failed to disarm vehicle after {0} attempts".format(send_count)
-			self._logger.error(error_msg)
-			msg = Message.from_error(error_msg)
-			self._response_queue.put(msg)
+			self._error("Failed to disarm vehicle after {0} attempts".format(send_count))
 			return False
 
 	def _takeoff_sender(self, latitude, longitude, altitude):
@@ -302,20 +286,20 @@ class DroneController(threading.Thread):
 		if latitude is not None and longitude is not None:
 			send_count = 0		
 
-			while not takeoff_complete and send_count < DEFAULT_TAKEOFF_RESEND_LIMIT:
+			while not takeoff_complete and send_count < self._server_config.takeoff_resend_limit:
 				self._takeoff_sender(latitude, longitude, altitude+target_altitude)
 				send_count += 1
-				time.sleep(DEFAULT_TAKEOFF_TIMEOUT)				
-				takeoff_complete = self._vehicle.location.global_relative_frame.alt >= DEFAULT_MIN_TAKEOFF_HEIGHT
+				time.sleep(self._server_config.takeoff_timeout)				
+				takeoff_complete = self._vehicle.location.global_relative_frame.alt >= self._server_config.min_takeoff_height
 				if takeoff_complete:
 					self._logger.info("Takeoff successful")
-				elif send_count < DEFAULT_TAKEOFF_RESEND_LIMIT:
-					self._logger.warning("Failed to reach minimum takeoff altitude of {0} meters, retrying takeoff command {1}".format(DEFAULT_MIN_TAKEOFF_HEIGHT, send_count))
+				elif send_count < self._server_config.takeoff_resend_limit:
+					self._logger.warning("Failed to reach minimum takeoff altitude of {0} meters, retrying takeoff command {1}".format(self._server_config.min_takeoff_height, send_count))
 				else:
-					self._logger.error("Failed to takeoff after {0} attempts".format(DEFAULT_TAKEOFF_RESEND_LIMIT))	
+					self._error("Failed to takeoff after {0} attempts".format(self._server_config.takeoff_resend_limit))
 
 		else:
-			self._logger.error("Ignoring TAKEOFF command - No takeoff location specified and no GPS data available.")
+			self._error("Ignoring TAKEOFF command - No takeoff location specified and no GPS data available.")
 
 		time.sleep(DEFAULT_INTERMISSION)
 		return takeoff_complete
@@ -337,20 +321,20 @@ class DroneController(threading.Thread):
 			last_altitude = self._vehicle.location.global_relative_frame.alt
 			send_count = 0
 
-			while not landing_complete and send_count < DEFAULT_LAND_RESEND_LIMIT:
+			while not landing_complete and send_count < self._server_config.land_resend_limit:
 				self._land_sender(latitude, longitude, ground_level)
 				send_count += 1
-				time.sleep(DEFAULT_LAND_TIMEOUT)
-				landing_complete = last_altitude - self._vehicle.location.global_relative_frame.alt >= DEFAULT_MIN_LAND_DELTA
+				time.sleep(self._server_config.land_timeout)
+				landing_complete = last_altitude - self._vehicle.location.global_relative_frame.alt >= self._server_config.min_land_delta
 				if landing_complete:
 					self._logger.info("Landing successfully initiated")
-				elif send_count < DEFAULT_LAND_RESEND_LIMIT:
+				elif send_count < self._server_config.land_resend_limit:
 					self._logger.warning("Failed to initiate landing, retrying land command {0}".format(send_count))
 				else:
-					self._logger.error("Failed to initiate landing after {0} attempts".format(DEFAULT_LAND_RESEND_LIMIT))	
+					self._error("Failed to initiate landing after {0} attempts".format(self._server_config.land_resend_limit))
 			
 		else:
-			self._logger.error("Ignoring LAND command - No landing location specified and no GPS data available.")
+			self._error("Ignoring LAND command - No landing location specified and no GPS data available.")
 
 		time.sleep(DEFAULT_INTERMISSION)
 		return landing_complete
@@ -369,7 +353,7 @@ class DroneController(threading.Thread):
 		for element in cmd_list:
 			self._logger.info("Parsing mission element {0}".format(element))
 			if 'cmd' not in element:
-				self._logger.error("Rejecting Mission - Malformed mission element (cmd not found): {0}".format(element))
+				self._error("Rejecting Mission - Malformed mission element (cmd not found): {0}".format(element))
 				cmds.clear()
 				break
 			
@@ -394,7 +378,7 @@ class DroneController(threading.Thread):
 
 
 				if lat is None or lon is None or alt is None:
-					self._logger.error("Rejecting Mission - Malformed mission element WAYPOINT (missing lat, long, or alt): {0}".format(element))
+					self._error("Rejecting Mission - Malformed mission element WAYPOINT (missing lat, long, or alt): {0}".format(element))
 					cmds.clear()
 					break
 
@@ -449,7 +433,7 @@ class DroneController(threading.Thread):
 		mission_sent = False
 		send_count = 0
 
-		while not mission_sent and send_count < DEFAULT_MISSION_RESEND_LIMIT:
+		while not mission_sent and send_count < self._server_config.mission_resend_limit:
 			mission_sent = self._mission_sender(cmd_list)
 			send_count += 1
 
@@ -461,7 +445,7 @@ class DroneController(threading.Thread):
 			time.sleep(DEFAULT_INTERMISSION)
 
 		if not mission_sent:
-			self._logger.error("An error occurred during multiple attempts to upload mission, rejecting mission")
+			self._error("An error occurred during multiple attempts to upload mission, rejecting mission")
 
 		time.sleep(DEFAULT_INTERMISSION)
 

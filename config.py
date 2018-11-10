@@ -87,9 +87,33 @@ class Config(object):
 		self._settings['failsafe_confirmed'] = new_value
 
 	@property
-	def arm_resend_limit(self):
-		return self.settings['arm_resend_limit']
+	def takeoff_resend_limit(self):
+		return self._settings['takeoff_resend_limit']
 
+	@property
+	def takeoff_timeout(self):
+		return self._settings['takeoff_timeout']
+
+	@property
+	def min_takeoff_height(self):
+		return self._settings['min_takeoff_height']
+
+	@property
+	def arm_resend_limit(self):
+		return self._settings['arm_resend_limit']
+
+	@property
+	def land_resend_limit(self):
+		return self._settings['land_resend_limit']
+
+	@property
+	def land_timeout(self):
+		return self._settings['land_timeout']	
+
+	@property
+	def mission_resend_limit(self):
+		return self._settings['mission_resend_limit']
+	
 	@property
 	def preflight_passed(self):
 		return self._settings['preflight_passed']
