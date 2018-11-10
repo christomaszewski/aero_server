@@ -32,17 +32,20 @@ class Config(object):
  								"rtsp_port":8554,
 								"heartbeat_timeout":10.0,
 								"failsafe_mission":[{"latitude": 40.599374, "altitude": 5.0, "cmd": "WAYPOINT", "longitude": -80.009048},{"cmd": "LAND"}],
+								"failsafe_confirmed":False,
 								"default_takeoff_alt":2.5,
 								"default_waypoint_radius":1.0,
 								"default_waypoint_hold":1.0,
 								"intermission":0.1,
+								"arm_resend_limit":5,
 								"mission_resend_limit":5,
 								"takeoff_resend_limit":5,
 								"land_resend_limit":5,
 								"takeoff_timeout":2.0,
 								"land_timeout":3.0,
 								"min_land_delta":2.0,
-								"min_takeoff_height":1.0}
+								"min_takeoff_height":1.0,
+								"preflight_passed":False}
 
 
 	def __init__(self, settings_dict):
@@ -73,3 +76,17 @@ class Config(object):
 	@property
 	def failsafe_mission(self):
 		return self._settings['failsafe_mission']
+
+	@property
+	def failsafe_confirmed(self):
+		return self._settings['failsafe_confirmed']
+
+	@property
+	def arm_resend_limit(self):
+		return self.settings['arm_resend_limit']
+
+	@property
+	def preflight_passed(self):
+		return self._settings['preflight_passed']
+	
+	

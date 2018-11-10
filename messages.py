@@ -37,6 +37,15 @@ class Message(object):
 	def __init__(self, msg_type, payload):
 		self._type = msg_type
 		self._payload = payload
+
+	@classmethod
+	def from_error(cls, error_msg):
+		return cls('ERROR', {"msg":error_msg})
+
+	@classmethod
+	def from_info_dict(cls, info_dict):
+		return cls('INFO', info_dict)
+
 	def __repr__(self):
 		return "{._type} {._payload}".format(self, self)
 

@@ -22,6 +22,13 @@ handler.setFormatter(formatter)
 
 logger.addHandler(handler)
 
+# Setup logfile and add file handler to logger
+log_filename = "{0}.txt".format(time.strftime('%d_%m_%Y_%H_%M_%S'))
+file_handler = logging.FileHandler(log_filename)
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
 # Attempt to load server config file
 server_config_filename = '/home/aero/src/aero_server/server.conf'
 server_config = None

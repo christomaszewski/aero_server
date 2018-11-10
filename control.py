@@ -1,6 +1,7 @@
 import threading
 import dronekit
 from pymavlink import mavutil
+from messages import Message
 import Queue
 import time
 import logging
@@ -165,6 +166,35 @@ class DroneController(threading.Thread):
 
 		time.sleep(DEFAULT_INTERMISSION)
 
+	def _preflight(self, **unknown_options):
+		if not self._server_config.failsafe_confirmed:
+			error_msg = "Preflight failed due to unconfirmed failsafe missions"
+			self._logger.error(error_msg)
+			msg = Message.from_error(error_msg)
+			self._response_queue.put(msg)
+			return False
+
+		self._logger.debug("Arming vehicle")
+		self._vehicle.armed = True
+
+		time.sleep(1.0)
+
+		if not self._vehicle.armed:
+			error_msg = "Preflight failed due to failed arming"
+			self._logger.error(error_msg)
+			msg = Message.from_error(error_msg)
+			self._response_queue.put(msg)
+
+		self._logger.debug("Disarming vehicle")
+		self._vehicle.armed = False
+
+		time.sleep(1.0)
+
+		if self._vehicle.armed:
+			error_msg = "Preflight failed due to failed disarming"
+			self._logger.error(error_msg)
+			msg = Message.from_error(error_msg)
+			self._response_queue.put(msg)
 
 	# Processes unrecognized commmands
 	def _error(self, cmd, **cmd_args):
@@ -183,31 +213,52 @@ class DroneController(threading.Thread):
 		self._logger.debug("Arming vehicle")
 		self._vehicle.armed = True
 
-		while self._is_running() and not self._vehicle.armed:
+		send_count = 1
+
+		while self._is_running() and not self._vehicle.armed and send_count < self._server_config.arm_resend_limit:
 			self._logger.info("Waiting for arming to succeed")
 			time.sleep(DEFAULT_INTERMISSION)
 			self._vehicle.armed = True
+			send_count += 1
 
-		self._logger.debug("Vehicle armed")
-		
 		time.sleep(DEFAULT_INTERMISSION)
 
-
+		if self._vehicle.armed:
+			self._logger.debug("Vehicle armed")
+			return True
+		else:
+			error_msg = "Failed to arm vehicle after {0} attempts".format(send_count)
+			self._logger.error(error_msg)
+			msg = Message.from_error(error_msg)
+			self._response_queue.put(msg)
+			return False
+		
 	def _disarm(self, **unknown_options):
 		self._logger.debug("Disarming vehicle")
 		self._vehicle.armed = False
 
-		while self._is_running() and self._vehicle.armed:
+		send_count = 1
+
+		while self._is_running() and self._vehicle.armed and send_count < self._server_config.arm_resend_limit:
 			self._logger.info("Waiting for disarming to succeed")
 			time.sleep(DEFAULT_INTERMISSION)
 			self._vehicle.armed = False
-
-		self._logger.debug("Vehicle disarmed, Clearing mission")
-		cmds = self._vehicle.commands
-		cmds.clear()
-		cmds.upload()
+			send_count += 1
 
 		time.sleep(DEFAULT_INTERMISSION)
+
+		if not self._vehicle.armed:
+			self._logger.debug("Vehicle disarmed, Clearing mission")
+			cmds = self._vehicle.commands
+			cmds.clear()
+			cmds.upload()
+			return True
+		else:
+			error_msg = "Failed to disarm vehicle after {0} attempts".format(send_count)
+			self._logger.error(error_msg)
+			msg = Message.from_error(error_msg)
+			self._response_queue.put(msg)
+			return False
 
 	def _takeoff_sender(self, latitude, longitude, altitude):
 		self._logger.info("Taking off to {0} meters above {1},{2}".format(altitude, latitude, longitude))
