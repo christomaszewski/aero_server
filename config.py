@@ -81,6 +81,10 @@ class Config(object):
 	def failsafe_confirmed(self):
 		return self._settings['failsafe_confirmed']
 
+	@failsafe_confirmed.setter
+	def failsafe_confirmed(self, new_value):
+		self._settings['failsafe_confirmed'] = new_value
+
 	@property
 	def arm_resend_limit(self):
 		return self.settings['arm_resend_limit']
@@ -88,5 +92,9 @@ class Config(object):
 	@property
 	def preflight_passed(self):
 		return self._settings['preflight_passed']
+
+	@preflight_passed.setter
+	def preflight_passed(self, new_value):
+		self._settings['preflight_passed'] = new_value
 	
 	

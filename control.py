@@ -90,7 +90,8 @@ class DroneController(threading.Thread):
 		self._is_interrupted = True
 		self._mode('GUIDED')
 		
-		self._mission(DEFAULT_FAILSAFE_MISSION)
+		self._mission(self._server_config.failsafe_mission)
+		#self._mission(DEFAULT_FAILSAFE_MISSION)
 
 		# This line skips over HOME at front of mission
 		#self._vehicle.commands.next = 1
@@ -184,6 +185,7 @@ class DroneController(threading.Thread):
 			self._logger.error(error_msg)
 			msg = Message.from_error(error_msg)
 			self._response_queue.put(msg)
+			return False
 
 		self._logger.debug("Disarming vehicle")
 		self._vehicle.armed = False
@@ -195,6 +197,10 @@ class DroneController(threading.Thread):
 			self._logger.error(error_msg)
 			msg = Message.from_error(error_msg)
 			self._response_queue.put(msg)
+			return False
+
+		self._server_config.preflight_passed = True
+	
 
 	# Processes unrecognized commmands
 	def _error(self, cmd, **cmd_args):
@@ -210,6 +216,13 @@ class DroneController(threading.Thread):
 		self._logger.debug("Mode after set: {0}".format(self._vehicle.mode))
 
 	def _arm(self, **unknown_options):
+		if not self._server_config.preflight_passed:
+			error_msg = "Arming denied, preflight not complete"
+			self._logger.error(error_msg)
+			msg = Message.from_error(error_msg)
+			self._response_queue.put(msg)
+			return False
+	
 		self._logger.debug("Arming vehicle")
 		self._vehicle.armed = True
 

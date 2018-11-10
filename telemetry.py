@@ -36,7 +36,7 @@ class TelemetrySender(object):
 			print('attempting to connect to ', self.server_ip)
 			jsock = MulticastJsonClient()
 			try:
-				jsock.connect(self.server_ip, 10012)
+				jsock.connect(self.server_ip, 10010)
 				ready = True
 			except:
 				print("Socket Refused")
