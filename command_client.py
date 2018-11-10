@@ -26,10 +26,6 @@ time.sleep(3.0)
 response = jsock.read_obj(decoder=Message.json_decoder)
 print(response)
 
-time.sleep(3.0)
-
-response = jsock.read_obj(decoder=Message.json_decoder)
-print(response)
 
 
 jsock.close()

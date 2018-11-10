@@ -26,8 +26,10 @@ class CommandParser(threading.Thread):
 		super(CommandParser, self).start()
 
 	def stop(self):
+		if self._is_alive:
+			self._socket.close()
+
 		self._is_alive = False
-		self._socket.close()
 
 	def run(self):
 		with self._socket:

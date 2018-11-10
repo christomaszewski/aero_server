@@ -27,7 +27,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 # Setup logfile and add file handler to logger
-log_dir = "{0}/logs"
+log_dir = "{0}/logs".format(src_dir)
 if not os.path.exists(log_dir):
 	os.makedirs(log_dir)
 

@@ -89,10 +89,12 @@ class JsonSocket(object):
 		self._socket.close()
 		self._marked_as_closed = True
 
+	def mark_as_closed(self):
+		self._marked_as_closed = True
+
 	@property
 	def marked_as_closed(self):
 		return self._marked_as_closed
-	
 
 	@property
 	def socket(self):
