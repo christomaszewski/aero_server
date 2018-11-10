@@ -18,7 +18,7 @@ class TelemetrySender(object):
 
 	def __init__(self, ipaddr):
 		self.server_ip = ipaddr
-
+		self._logger = logging.getLogger('telemetry_server_log')
 
 	def init_message_dispatch(self):
 		message_queue = Queue.Queue()
@@ -39,7 +39,7 @@ class TelemetrySender(object):
 				jsock.connect(self.server_ip, 10012)
 				ready = True
 			except:
-				print("Socket Refused")
+				self._logger.warn("Socket Refused")
 				time.sleep(5)
 
 
@@ -71,13 +71,13 @@ class TelemetrySender(object):
 		mav = mavutil.mavlink_connection('tcp:127.0.0.1:5760')
 		mav.wait_heartbeat()
 
-                types_of_interest = [ 'GLOBAL_POSITION_INT',
+                types_of_interest = set([ 'GLOBAL_POSITION_INT',
                                       'ATTITUDE',
                                       'BATTERY_STATUS',
                                       'STATUSEXT',
                                       'MISSION_ITEM_REACHED',
                                       'MISSION_CURRENT'
-                                      'EXTENDED_SYS_STATE' ]
+                                      'EXTENDED_SYS_STATE' ])
 
                 msg_count = {t:0 for t in types_of_interest}
                 msg_send_rate = defaultdict(itertools.repeat(1).next, { 'GLOBAL_POSITION_INT' : 20,
@@ -88,12 +88,50 @@ class TelemetrySender(object):
                                                                         'MISSION_CURRENT'     : 1,
                                                                         'EXTENDED_SYS_STATE'  : 5  })
 		while True:
+			msg = mav.recv_match(blocking=True)
+			msg_type = msg.get_type()
+			if msg_type not in msg_count:
+				msg_count[msg_type] = 0
+
+			if msg is not None and msg_count[msg_type] % msg_send_rate[msg_type] == 0:
+				if msg_type in types_of_interest:
+					message_queue.put(msg)
+					self._logger.info(msg)
+				else:
+					self._logger.debug(msg)
+
+			msg_count[msg_type] += 1
+
+			"""
 			msg = mav.recv_match(type=types_of_interest, blocking=True)
 			msg_type = msg.get_type()
 			if msg is not None and msg_count[msg_type] % msg_send_rate[msg_type] == 0:
 				message_queue.put(msg)
 
 			msg_count[msg_type] += 1
+			"""
+
+# Define aero_server src dir
+src_dir = "/home/aero/src/aero_server"
+
+# Initialize and Setup Logger
+logger = logging.getLogger(name='telemetry_server_log')
+logger.setLevel(logging.DEBUG)
+
+# Setup logfile and add file handler to logger
+log_dir = "{0}/logs".format(src_dir)
+if not os.path.exists(log_dir):
+	os.makedirs(log_dir)
+
+log_filename = "{0}/telemetry_log_{1}.txt".format(log_dir, time.strftime('%d_%m_%Y_%H_%M_%S'))
+file_handler = logging.FileHandler(log_filename)
+file_handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+
 
 #init_message_dispatch()
 t = TelemetrySender('224.0.0.150')
