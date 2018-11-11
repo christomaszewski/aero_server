@@ -30,17 +30,17 @@ class Config(object):
 								"multicast_port":10000,
 								"command_port":6760,
  								"rtsp_port":8554,
-								"heartbeat_timeout":10.0,
+								"heartbeat_timeout":20.0,
 								"failsafe_mission":[{"latitude": 40.599374, "altitude": 5.0, "cmd": "WAYPOINT", "longitude": -80.009048},{"cmd": "LAND"}],
 								"failsafe_confirmed":False,
 								"default_takeoff_alt":2.5,
 								"default_waypoint_radius":1.0,
 								"default_waypoint_hold":1.0,
 								"intermission":0.1,
-								"arm_resend_limit":5,
-								"mission_resend_limit":5,
-								"takeoff_resend_limit":5,
-								"land_resend_limit":5,
+								"arm_resend_limit":10,
+								"mission_resend_limit":10,
+								"takeoff_resend_limit":10,
+								"land_resend_limit":10,
 								"arm_timeout":0.5,
 								"takeoff_timeout":2.0,
 								"land_timeout":3.0,
@@ -74,6 +74,10 @@ class Config(object):
 	@property
 	def multicast_ip(self):
 		return self._settings['multicast_ip']
+
+	@property
+	def heartbeat_timeout(self):
+		return self._settings['heartbeat_timeout']
 
 	@property
 	def failsafe_mission(self):

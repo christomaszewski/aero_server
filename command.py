@@ -64,10 +64,14 @@ class CommandParser(threading.Thread):
 							param_dict = {payload['param']:self._server_config[payload['param']]}
 							response_msg = Message.from_info_dict(param_dict)
 							self._socket.send_obj(response_msg, Message.json_encoder)
+							
 						elif payload['cmd'] == 'GET' and 'param' in payload:
 							param_dict = {payload['param']:self._server_config[payload['param']]}
 							response_msg = Message.from_info_dict(param_dict)
 							self._socket.send_obj(response_msg, Message.json_encoder)
+
+						else:
+							self._logger.warning("Got unknown CONFIG message {0}".format(message))
 							
 					else:
 						self._logger.warning("Got unrecognized message {0}".format(message))

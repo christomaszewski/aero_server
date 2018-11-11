@@ -38,7 +38,8 @@ MAV_CMD = {'TAKEOFF':mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
 				'WAYPOINT':mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
 				'LAND':mavutil.mavlink.MAV_CMD_NAV_LAND,
 				'MODE':mavutil.mavlink.MAV_CMD_DO_SET_MODE,
-				'OVERRIDE':mavutil.mavlink.MAV_CMD_OVERRIDE_GOTO}
+				'OVERRIDE':mavutil.mavlink.MAV_CMD_OVERRIDE_GOTO,
+				'ARM_DISARM':mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM}
 
 MAV_MODE = {'GUIDED':8, 'AUTO':4}
 
@@ -128,7 +129,7 @@ class DroneController(threading.Thread):
 			if self._is_interrupted:
 				self._logger.info("Control thread interrupted")
 				time.sleep(3)
-			elif self._vehicle.armed and time.time() - self._last_heartbeat > DEFAULT_HEARTBEAT_TIMEOUT:
+			elif self._vehicle.armed and time.time() - self._last_heartbeat > self._server_config.heartbeat_timeout:
 				self._logger.warning("Lost heartbeat, executing failsafe behavior")
 
 				self.safety_behavior()
@@ -183,6 +184,10 @@ class DroneController(threading.Thread):
 			self._error("Preflight failed due to lack of GPS fix")
 			return False
 
+		if time.time() - self._last_heartbeat > self._server_config.hearbeat_timeout/2.0:
+			self._error("Preflight failes due to old heartbeat")
+			return False
+
 		self._logger.debug("Arming vehicle")
 		self._vehicle.armed = True
 
@@ -223,6 +228,10 @@ class DroneController(threading.Thread):
 
 		self._logger.debug("Mode after set: {0}".format(self._vehicle.mode))
 
+	def _raw_arm(self):
+		arg_list = [1, 0, 0, 0, 0, 0, 0]
+		self._send_command(MAV_CMD['ARM_DISARM'], *arg_list)
+
 	def _arm(self, **unknown_options):
 		if not self._server_config.preflight_passed:
 			self._error("Arming denied, preflight not complete")
@@ -235,12 +244,19 @@ class DroneController(threading.Thread):
 		send_count = 1
 
 		while self._is_running() and not self._vehicle.armed and send_count < self._server_config.arm_resend_limit:
-			self._logger.info("Waiting for arming to succeed")
+			self._logger.info("Vehicle still disarmed, retrying arming...")
 			time.sleep(self._server_config.arm_timeout)
 			self._vehicle.armed = True
 			send_count += 1
 
 		time.sleep(DEFAULT_INTERMISSION)
+
+		# If still hasn't armed, give the raw arm command a try
+		if not self._vehicle.armed:
+			self._logger.info("Dronekit arming failed. Attempting to send a raw arm command")
+			self._raw_arm()
+
+		time.sleep(self._server_config.arm_timeout)
 
 		if self._vehicle.armed:
 			self._logger.debug("Vehicle armed")
@@ -248,6 +264,10 @@ class DroneController(threading.Thread):
 		else:
 			self._error("Failed to arm vehicle after {0} attempts".format(send_count))
 			return False
+
+	def _raw_disarm(self):
+		arg_list = [0, 0, 0, 0, 0, 0, 0]
+		self._send_command(MAV_CMD['ARM_DISARM'], *arg_list)
 		
 	def _disarm(self, **unknown_options):
 		self._logger.debug("Disarming vehicle")
@@ -257,12 +277,19 @@ class DroneController(threading.Thread):
 		send_count = 1
 
 		while self._is_running() and self._vehicle.armed and send_count < self._server_config.arm_resend_limit:
-			self._logger.info("Waiting for disarming to succeed")
+			self._logger.info("Vehicle still armed, retrying disarm...")
 			time.sleep(self._server_config.arm_timeout)
 			self._vehicle.armed = False
 			send_count += 1
 
 		time.sleep(DEFAULT_INTERMISSION)
+
+		# If still hasn't disarmed, give the raw disarm command a try
+		if not self._vehicle.armed:
+			self._logger.info("Dronekit disarming failed. Attempting to send a raw disarm command")
+			self._raw_disarm()
+
+		time.sleep(self._server_config.arm_timeout)
 
 		if not self._vehicle.armed:
 			self._logger.debug("Vehicle disarmed, Clearing mission")

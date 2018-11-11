@@ -17,4 +17,4 @@ jsock.connect(server_ip, server_port)
 while True:
 	cmd_msg = json.loads('{"cmd": "HEARTBEAT", "type": "CTRL"}', cls=Message.json_decoder)
 	jsock.send_obj(cmd_msg, encoder=Message.json_encoder)
-	time.sleep(1)
+	time.sleep(0.5)
