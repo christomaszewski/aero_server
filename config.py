@@ -33,7 +33,7 @@ class Config(object):
  								"low_battery_level":50.0,
  								"preflight_battery_level":85.0,
 								"heartbeat_timeout":20.0,
-								"failsafe_mission":[{"latitude": 40.599374, "altitude": 5.0, "cmd": "WAYPOINT", "longitude": -80.009048},{"cmd": "LAND"}],
+								"failsafe_mission":[{"latitude": 39.0481023, "altitude": 30.0, "cmd": "WAYPOINT", "longitude": -85.5415209},{"cmd": "LAND"}],
 								"failsafe_confirmed":False,
 								"default_takeoff_alt":2.5,
 								"default_waypoint_radius":1.0,

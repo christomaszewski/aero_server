@@ -26,7 +26,7 @@ DEFAULT_TAKEOFF_ALT = 2.5
 
 # Default failsafe params
 DEFAULT_HEARTBEAT_TIMEOUT = 20.0
-DEFAULT_FAILSAFE_MISSION = [{"latitude": 40.5993520, "altitude": 5.0, "cmd": "WAYPOINT", "longitude": -80.0092670}, {"cmd": "LAND", "latitude": 40.5993520, "longitude": -80.0092670}]
+DEFAULT_FAILSAFE_MISSION = [{"latitude": 39.0481023, "altitude": 30.0, "cmd": "WAYPOINT", "longitude": -85.5415209}, {"cmd": "LAND", "latitude": 39.0481023, "longitude": -85.5415209}]
 
 """
 FAILSAFE_CONF = '/home/aero/src/aero_server/failsafe.conf'
