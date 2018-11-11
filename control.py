@@ -306,7 +306,7 @@ class DroneController(threading.Thread):
 		time.sleep(DEFAULT_INTERMISSION)
 
 		# If still hasn't disarmed, give the raw disarm command a try
-		if not self._vehicle.armed:
+		if self._vehicle.armed:
 			self._logger.info("Dronekit disarming failed. Attempting to send a raw disarm command")
 			self._raw_disarm()
 			self._vehicle.armed = False
