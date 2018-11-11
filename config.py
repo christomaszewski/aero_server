@@ -30,6 +30,8 @@ class Config(object):
 								"multicast_port":10000,
 								"command_port":6760,
  								"rtsp_port":8554,
+ 								"low_battery_level":50.0,
+ 								"preflight_battery_level":85.0,
 								"heartbeat_timeout":20.0,
 								"failsafe_mission":[{"latitude": 40.599374, "altitude": 5.0, "cmd": "WAYPOINT", "longitude": -80.009048},{"cmd": "LAND"}],
 								"failsafe_confirmed":False,
@@ -74,6 +76,14 @@ class Config(object):
 	@property
 	def multicast_ip(self):
 		return self._settings['multicast_ip']
+
+	@property
+	def low_battery_level(self):
+		return self._settings['low_battery_level']
+	
+	@property
+	def preflight_battery_level(self):
+		return self._settings['preflight_battery_level']
 
 	@property
 	def heartbeat_timeout(self):

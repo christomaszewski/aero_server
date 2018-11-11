@@ -132,8 +132,20 @@ class DroneController(threading.Thread):
 			if self._is_interrupted:
 				self._logger.info("Control thread interrupted")
 				time.sleep(3)
+
+			elif self._vehicle.armed and self._vehicle.battery.level < self._server_config.low_battery_level:
+				failsafe_msg = "Low Battery, executing failsafe behavior"
+				self._logger.warning(failsafe_msg)
+				msg = Message("FAILSAFE", {"msg":failsafe_msg})
+				self._response_queue.put(msg)
+
+				self.safety_behavior()
+
 			elif self._vehicle.armed and time.time() - self._last_heartbeat > self._server_config.heartbeat_timeout:
-				self._logger.warning("Lost heartbeat, executing failsafe behavior")
+				failsafe_msg = "Lost heartbeat, executing failsafe behavior"
+				self._logger.warning(failsafe_msg)
+				msg = Message("FAILSAFE", {"msg":failsafe_msg})
+				self._response_queue.put(msg)
 
 				self.safety_behavior()
 
@@ -179,16 +191,20 @@ class DroneController(threading.Thread):
 	def _preflight(self, **unknown_options):
 		self._server_config.preflight_passed = False
 
-		if not self._server_config.failsafe_confirmed:
-			self._error("Preflight failed due to unconfirmed failsafe mission")
+		if self._vehicle.battery.level < self._server_config.preflight_battery_level:
+			self._error("Preflight failed due to insufficient battery level")
 			return False
 
 		if self._vehicle.gps_0.fix_type <= 1:
 			self._error("Preflight failed due to lack of GPS fix")
 			return False
 
+		if not self._server_config.failsafe_confirmed:
+			self._error("Preflight failed due to unconfirmed failsafe mission")
+			return False
+
 		if time.time() - self._last_heartbeat > self._server_config.heartbeat_timeout/2.0:
-			self._error("Preflight fails due to old heartbeat")
+			self._error("Preflight failed due to old heartbeat")
 			return False
 
 		self._logger.debug("Arming vehicle")
@@ -215,8 +231,9 @@ class DroneController(threading.Thread):
 		msg = Message.from_info_dict(info_dict)
 		self._response_queue.put(msg)
 
-		return True
+		self._logger.info("Preflight passed")
 
+		return True
 
 	# Processes unrecognized commmands
 	def _unknown(self, cmd, **cmd_args):
@@ -258,6 +275,7 @@ class DroneController(threading.Thread):
 		if not self._vehicle.armed:
 			self._logger.info("Dronekit arming failed. Attempting to send a raw arm command")
 			self._raw_arm()
+			self._vehicle.armed = True
 
 		time.sleep(self._server_config.arm_timeout)
 
@@ -291,6 +309,7 @@ class DroneController(threading.Thread):
 		if not self._vehicle.armed:
 			self._logger.info("Dronekit disarming failed. Attempting to send a raw disarm command")
 			self._raw_disarm()
+			self._vehicle.armed = False
 
 		time.sleep(self._server_config.arm_timeout)
 
