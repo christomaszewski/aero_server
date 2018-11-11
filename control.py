@@ -126,6 +126,9 @@ class DroneController(threading.Thread):
 		self._logger.info("DroneController running")
 		self._last_heartbeat = time.time()
 		while self._is_alive:
+			batt = self._vehicle.battery
+			self._logger.info(batt)
+
 			if self._is_interrupted:
 				self._logger.info("Control thread interrupted")
 				time.sleep(3)
