@@ -184,8 +184,8 @@ class DroneController(threading.Thread):
 			self._error("Preflight failed due to lack of GPS fix")
 			return False
 
-		if time.time() - self._last_heartbeat > self._server_config.hearbeat_timeout/2.0:
-			self._error("Preflight failes due to old heartbeat")
+		if time.time() - self._last_heartbeat > self._server_config.heartbeat_timeout/2.0:
+			self._error("Preflight fails due to old heartbeat")
 			return False
 
 		self._logger.debug("Arming vehicle")
