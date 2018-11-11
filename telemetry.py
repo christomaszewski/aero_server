@@ -11,7 +11,10 @@ import json
 import ast
 import sys
 import time
+import logging
+import os
 
+"""
 # Define aero_server src dir
 src_dir = "/home/aero/src/aero_server"
 
@@ -32,6 +35,7 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 
 logger.addHandler(file_handler)
+"""
 
 class TelemetrySender(object):
 
@@ -39,7 +43,7 @@ class TelemetrySender(object):
 
 	def __init__(self, ipaddr):
 		self.server_ip = ipaddr
-		self._logger = logging.getLogger('telemetry_server_log')
+		#self._logger = logging.getLogger('telemetry_server_log')
 
 	def init_message_dispatch(self):
 		message_queue = Queue.Queue()
@@ -57,7 +61,7 @@ class TelemetrySender(object):
 			print('attempting to connect to ', self.server_ip)
 			jsock = MulticastJsonClient()
 			try:
-				jsock.connect(self.server_ip, 10010)
+				jsock.connect(self.server_ip, 10012)
 				ready = True
 			except:
 				self._logger.warn("Socket Refused")
@@ -109,6 +113,7 @@ class TelemetrySender(object):
                                                                         'MISSION_CURRENT'     : 1,
                                                                         'EXTENDED_SYS_STATE'  : 5  })
 		while True:
+			"""
 			msg = mav.recv_match(blocking=True)
 			msg_type = msg.get_type()
 			if msg_type not in msg_count:
@@ -120,6 +125,7 @@ class TelemetrySender(object):
 					self._logger.info(msg)
 				else:
 					self._logger.debug(msg)
+					
 
 			msg_count[msg_type] += 1
 
@@ -130,7 +136,7 @@ class TelemetrySender(object):
 				message_queue.put(msg)
 
 			msg_count[msg_type] += 1
-			"""
+			
 
 
 

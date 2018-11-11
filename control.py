@@ -195,7 +195,7 @@ class DroneController(threading.Thread):
 			self._error("Preflight failed due to insufficient battery level")
 			return False
 
-		if self._vehicle.gps_0.fix_type <= 1:
+		if self._vehicle.gps_0.fix_type <= 2:
 			self._error("Preflight failed due to lack of GPS fix")
 			return False
 
